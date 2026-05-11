@@ -75,10 +75,25 @@ window.selectSQDEmoji = function(el, questionId, value) {
 };
 
 function goBack() {
-  if (currentPage > 1) {
-    showPage(currentPage - 1);
-  } else {
-    window.location.href = 'index.html';
+  // Find which page is currently active
+  const pages = document.querySelectorAll('.page');
+  let activeIndex = -1;
+
+  for (let i = 0; i < pages.length; i++) {
+    if (pages[i].classList.contains('active')) {
+      activeIndex = i;
+      break;
+    }
+  }
+
+  // If on page 1 (index 0), go back to the home page (index.html in root)
+  if (activeIndex === 0) {
+    // Navigate to the root directory's index.html
+    window.location.href = '../index.html';
+  }
+  // Otherwise go to previous page
+  else if (activeIndex > 0) {
+    goPrev(activeIndex + 1);
   }
 }
 
