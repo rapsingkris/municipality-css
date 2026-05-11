@@ -35,8 +35,8 @@ body {
 .step1-progress-wrap {
   margin-top: 1.5rem;
   text-align: left;
-  padding-left: 2rem;
-  padding-right: 2rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
 }
 
 .step1-progress-lines {
@@ -254,35 +254,42 @@ textarea { resize: vertical; min-height:210px; }
 /* ── EMOJI LEGEND ── */
 .emoji-legend {
   display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
+  flex-wrap: nowrap;           /* Prevents wrapping to next line */
+  gap: 0.5rem;                 /* Smaller gap to fit all items */
   background: #f8fafc;
-  padding: 1rem;
+  padding: 0.75rem 0.5rem;
   border-radius: 12px;
   margin-bottom: 1.5rem;
   justify-content: space-between;
+  overflow-x: visible;         /* No scrolling */
 }
 
 .legend-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.3rem;
+  gap: 0.2rem;
   text-align: center;
   flex: 1;
-  min-width: 60px;
+  min-width: 0;                /* Allows shrinking */
+  max-width: 70px;
 }
 
 .legend-item img {
-  width: 40px;
-  height: 40px;
+  width: 28px;                 /* Slightly smaller on mobile */
+  height: 28px;
   object-fit: contain;
 }
 
 .legend-item span {
-  font-size: 0.7rem;
+  font-size: 0.55rem;        /* Smaller text */
   font-weight: 500;
   color: #475569;
+  white-space: normal;       /* Allow text to wrap if needed */
+  text-align: center;
+  line-height: 1.2;
+  max-width: 65px;
+  word-break: break-word;
 }
 
 /* ── SQD QUESTION CARDS (with subtle border/shadow) ── */
@@ -304,22 +311,25 @@ textarea { resize: vertical; min-height:210px; }
 /* ── EMOJI OPTIONS (NO BORDER BY DEFAULT) ── */
 .sqd-emoji-group {
   margin-top: 1rem;
-  margin-left: 4rem;
-  margin-right: 5rem;
+  margin-left: 0;              /* Remove left margin */
+  margin-right: 0;             /* Remove right margin */
   margin-bottom: 0.5rem;
   display: flex !important;
   flex-direction: row !important;
   justify-content: space-between;
-  gap: 1.5rem;
+  gap: 0.25rem;                /* Smaller gap */
   flex-wrap: nowrap !important;
+  width: 100%;
 }
 
 .sqd-emoji-option {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 60px;
-  padding: 8px;
+  flex: 1;
+  min-width: 0;                /* Allow shrinking */
+  max-width: 55px;             /* Limit max width */
+  padding: 6px 2px;
   border: none;
   border-radius: 12px;
   cursor: pointer;
@@ -328,8 +338,8 @@ textarea { resize: vertical; min-height:210px; }
 }
 
 .sqd-emoji img {
-  width: 35px !important;
-  height: 50px !important;
+  width: 28px !important;      /* Smaller emoji images */
+  height: 40px !important;
   display: block;
   margin: 0 auto;
 }
@@ -666,9 +676,20 @@ textarea { resize: vertical; min-height:210px; }
   .inline-rating label { min-width: 55px; font-size: 0.72rem; }
   .btn { font-size: 0.88rem; padding: 0.78rem 0.8rem; }
   .progress-header { padding: 0.9rem 1.2rem; }
-  .sqd-emoji-group { gap: 0.2rem; overflow-x: auto; padding-bottom: 0.5rem;}
-  .sqd-emoji-option { min-width: 55px; }
-  .sqd-emoji img { width: 35px; height: 35px;}
+
+  .sqd-emoji-option {
+    max-width: 40px;
+    padding: 4px 1px;
+  }
+
+  .sqd-emoji img {
+    width: 20px !important;
+    height: 28px !important;
+  }
+
+  .sqd-emoji-group {
+    gap: 0.15rem;
+  }
 }
 
 @media (max-width: 360px) {
@@ -859,6 +880,35 @@ textarea { resize: vertical; min-height:210px; }
   .site-header,
   .site-footer {
     display: none;
+  }
+
+   .legend-item {
+    max-width: 55px;
+  }
+
+  .legend-item img {
+    width: 22px;
+    height: 22px;
+  }
+
+  .legend-item span {
+    font-size: 0.5rem;
+    max-width: 50px;
+  }
+
+  .emoji-legend {
+    gap: 0.15rem;
+    padding: 0.5rem 0.15rem;
+  }
+
+  .sqd-emoji-option {
+    max-width: 45px;
+    padding: 4px 1px;
+  }
+
+  .sqd-emoji img {
+    width: 22px !important;
+    height: 32px !important;
   }
 }
 
