@@ -33,6 +33,52 @@ const emojiOptions = [
 let currentPage = 1;
 const totalPages = 4;
 
+// ── INPUT VALIDATIONS ──
+
+// Prevent numbers in name fields
+function preventNumbers(e) {
+  e.target.value = e.target.value.replace(/[0-9]/g, '');
+}
+
+// Validate age (acceptable range 1-120)
+function validateAge(e) {
+  let value = parseInt(e.target.value);
+  if (isNaN(value)) {
+    e.target.value = '';
+  } else if (value < 1) {
+    e.target.value = 1;
+  } else if (value > 120) {
+    e.target.value = 120;
+  }
+}
+
+// Set date restrictions (current month and last month only)
+function setDateRestrictions() {
+  const dateInput = document.getElementById('petsa');
+  if (!dateInput) return;
+
+  const today = new Date();
+  const currentYear = today.getFullYear();
+  const currentMonth = today.getMonth(); // 0-11
+
+  // Calculate first day of last month
+  const lastMonthDate = new Date(currentYear, currentMonth - 1, 1);
+  const lastMonthYear = lastMonthDate.getFullYear();
+  const lastMonth = lastMonthDate.getMonth();
+
+  // First day of last month (YYYY-MM-DD)
+  const minDate = `${lastMonthYear}-${String(lastMonth + 1).padStart(2, '0')}-01`;
+
+  // Today's date as max
+  const maxDate = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+  dateInput.setAttribute('min', minDate);
+  dateInput.setAttribute('max', maxDate);
+
+  // Set default value to today
+  dateInput.value = maxDate;
+}
+
 // ── SELECT SQD EMOJI ──
 window.selectSQDEmoji = function(el, questionId, value) {
   const card = el.closest('.sqd-question-card');
@@ -169,11 +215,44 @@ function showPage(num) {
 
 window.goPrev = function(fromPage) {
   if (fromPage > 1) showPage(fromPage - 1);
-  else window.location.href = 'index.html';
+  else window.location.href = '../index.html';
 };
 
+// Scroll to first empty SQD question
+function scrollToFirstEmpty() {
+  const cards = document.querySelectorAll('.sqd-question-card');
+  for (let i = 0; i < cards.length; i++) {
+    const card = cards[i];
+    const selected = card.querySelector('.sqd-emoji-option.selected');
+
+    if (!selected) {
+      // Scroll to the first unanswered question
+      card.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      });
+
+      // Highlight the card briefly
+      card.style.transition = 'background-color 0.3s';
+      card.style.backgroundColor = '#fee2e2';
+      setTimeout(() => {
+        card.style.backgroundColor = '';
+      }, 1500);
+
+      return;
+    }
+  }
+}
+
 window.goNext = function(fromPage) {
-  if (validatePage(fromPage)) showPage(fromPage + 1);
+  if (validatePage(fromPage)) {
+    showPage(fromPage + 1);
+  } else {
+    // If validation fails on page 3, scroll to first empty question
+    if (fromPage === 3) {
+      scrollToFirstEmpty();
+    }
+  }
 };
 
 window.selectRadio = function(el, groupId) {
@@ -347,18 +426,25 @@ function showSuccessScreen() {
 document.addEventListener('DOMContentLoaded', () => {
   buildSQDTable();
 
-  const petsaInput = document.getElementById('petsa');
-  if (petsaInput) {
-    // Set max date to today (prevents future dates)
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    const todayString = `${year}-${month}-${day}`;
+  // Set date restrictions (current and last month only)
+  setDateRestrictions();
 
-    petsaInput.valueAsDate = new Date();
-    petsaInput.setAttribute('max', todayString);
-    petsaInput.setAttribute('min', '2020-01-01');
+  // Add validation to name fields (prevent numbers)
+  const firstNameInput = document.getElementById('firstName');
+  const lastNameInput = document.getElementById('lastName');
+
+  if (firstNameInput) {
+    firstNameInput.addEventListener('input', preventNumbers);
+  }
+  if (lastNameInput) {
+    lastNameInput.addEventListener('input', preventNumbers);
+  }
+
+  // Add age validation
+  const ageInput = document.getElementById('edad');
+  if (ageInput) {
+    ageInput.addEventListener('input', validateAge);
+    ageInput.addEventListener('blur', validateAge);
   }
 
   updateProgressLines(1);
