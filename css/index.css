@@ -173,7 +173,10 @@ body {
   }
 
   .btn-start {
-    font-size: 0.95rem;
-    padding: 0.7rem 1.5rem;
-  }
+    font-size: 1.1rem;
+    padding: 1rem 2rem;
+    width: 70%;
+    max-width: 300px;
+    border-radius: 50px;
+}
 }
