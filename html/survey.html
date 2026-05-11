@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="tl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Client Satisfaction Survey – Bayan ng Luisiana</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="stylesheet" href="../css/survey.css">
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="site-header">
+  <div class="site-header-inner">
+    <div class="site-header-logos">
+      <img src="../images/bagong_pilipinas_logo.png" alt="Bagong Pilipinas">
+      <img src="../images/luisiana_logo.png" alt="Luisiana">
+    </div>
+    <div class="site-header-text">
+      <div class="site-header-title">Municipality of Luisiana</div>
+      <div class="site-header-sub">Client Satisfaction Survey</div>
+    </div>
+  </div>
+</header>
+
+<!-- Mobile Header (visible only on mobile) -->
+<div class="mobile-header">
+  <button class="mobile-back-btn" onclick="goBack()">
+    <i class="fas fa-arrow-left"></i>
+  </button>
+  <div class="mobile-title">Client Satisfaction Survey</div>
+</div>
+
+<div class="container" id="mainContainer">
+
+  <!-- PROGRESS HEADER -->
+  <div class="step1-progress-wrap">
+    <div class="step1-progress-lines">
+      <div class="progress-line active"></div>
+      <div class="progress-line"></div>
+      <div class="progress-line"></div>
+      <div class="progress-line"></div>
+    </div>
+    <div class="step1-step-label">Hakbang 1 ng 4</div>
+  </div>
+
+  <!-- ══ STEP 1: PERSONAL INFO ══ -->
+  <div class="page active" id="page1">
+    <div class="page-title">Impormasyon ng Kliyente</div>
+    <div class="page-sub">Punan ang mga patlang sa ibaba.</div>
+
+    <div class="form-group">
+      <label class="form-label">
+        Pangalan <span style="font-weight:400;color:var(--gray)">(opsyonal)</span>
+      </label>
+      <div class="two-col">
+        <div>
+          <input type="text" id="firstName" placeholder="Unang Pangalan">
+        </div>
+        <div>
+          <input type="text" id="lastName" placeholder="Apelyido">
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="email">
+        Email Address <span style="font-weight:400;color:var(--gray)">(opsyonal)</span>
+      </label>
+      <input type="email" id="email" placeholder="iyong@email.com">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="petsa">Petsa </label>
+      <input type="date" id="petsa" max="">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Kasarian at Edad</label>
+      <div class="two-col">
+        <div>
+          <select id="kasarian">
+            <option value="" disabled selected>Kasarian</option>
+            <option value="Babae">Babae</option>
+            <option value="Lalaki">Lalaki</option>
+            <option value="Prefer not to say">Hindi nais magbigay</option>
+          </select>
+        </div>
+        <div>
+          <input type="number" id="edad" placeholder="Edad" min="1" max="120">
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="tanggapan">Tanggapan Pinuntahan <span class="req">*</span></label>
+      <select id="tanggapan">
+        <option value="" disabled selected>Pumili ng Tanggapan</option>
+        <option value="Mayor's Office">Office of Municipal Mayor (MO)</option>
+        <option value="MPDC">Municipal Planning and Development Council (MPDC)</option>
+        <option value="MBO">Municipal Budget Office (MBO)</option>
+        <option value="MTO">Municipal Treasurers Office (MTO)</option>
+        <option value="MAcO">Municipal Accounting Office (MAcO)</option>
+        <option value="MCR">Municipal Civil Registrar (MCR)</option>
+        <option value="MENRO">Municipal Environment and Natural Resources Office (MENRO)</option>
+        <option value="MSWDO">Municipal Social Welfare and Development Office (MSWDO)</option>
+        <option value="OVM/SB">Office of the Vice Mayor / Sangguniang Bayan</option>
+        <option value="MAgO">Municipal Agricultural Office (MAgO)</option>
+        <option value="MAsO">Municipal Assessor Office (MAsO)</option>
+        <option value="MEO">Municipal Engineering Office (MEO)</option>
+        <option value="MHO">Municipal Health Office (MHO)</option>
+        <option value="MDRRMO">Municipal Disaster Risk Reduction and Management Office (MDRRMO)</option>
+        <option value="LWS">Luisiana WaterWorks System (LWS)</option>
+        <option value="PESO/4Ps/SLP">Public Employment Service Office (PESO) / Pantawid Pamilyang Pilipino Program (4Ps) / Sustainable Livelihood Program (SLP)</option>
+        <option value="LYDO">Local Youth Development Office (LYDO)</option>
+        <option value="Tourism Office">Tourism Office</option>
+        <option value="HRMO/MRVDC">Human Resource Management Office (HRMO) / MRVDC</option>
+        <option value="NC/BPLO">NC / Business Permit and Licensing Office (BPLO)</option>
+        <option value="KaSaMa">Kalinga sa Matatanda (KaSaMa))</option>
+        <option value="DILG">Department of the Interior and Local Government (DILG)</option>
+
+      </select>
+      <div class="error-msg" id="err-tanggapan">Piliin ang tanggapan.</div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Uri ng Kliyente</label>
+      <div class="radio-group" id="uri_kliyente">
+        <label class="radio-option" onclick="selectRadio(this,'uri_kliyente')">
+          <input type="radio" name="uri_kliyente" value="Mamamayan"> Mamamayan (Citizen)
+        </label>
+        <label class="radio-option" onclick="selectRadio(this,'uri_kliyente')">
+          <input type="radio" name="uri_kliyente" value="Negosyo"> Negosyo (Business)
+        </label>
+        <label class="radio-option" onclick="selectRadio(this,'uri_kliyente')">
+          <input type="radio" name="uri_kliyente" value="Gobyerno"> Gobyerno (Government Employee / Agency)
+        </label>
+      </div>
+    </div>
+
+    <div class="form-group">
+    <label class="form-label" for="rehiyon">Rehiyon </label>
+    <select id="rehiyon">
+      <option value="" disabled selected>Pumili ng Rehiyon</option>
+      <option value="NCR">National Capital Region (NCR)</option>
+      <option value="CAR">Cordillera Administrative Region (CAR)</option>
+      <option value="Region I">Region I (Ilocos Region)</option>
+      <option value="Region II">Region II (Cagayan Valley)</option>
+      <option value="Region III">Region III (Central Luzon)</option>
+      <option value="Region IV-A">Region IV-A (CALABARZON)</option>
+      <option value="Region IV-B">Region IV-B (MIMAROPA)</option>
+      <option value="Region V">Region V (Bicol Region)</option>
+      <option value="Region VI">Region VI (Western Visayas)</option>
+      <option value="Region VII">Region VII (Central Visayas)</option>
+      <option value="Region VIII">Region VIII (Eastern Visayas)</option>
+      <option value="Region IX">Region IX (Zamboanga Peninsula)</option>
+      <option value="Region X">Region X (Northern Mindanao)</option>
+      <option value="Region XI">Region XI (Davao Region)</option>
+      <option value="Region XII">Region XII (SOCCSKSARGEN)</option>
+      <option value="Region XIII">Region XIII (Caraga)</option>
+      <option value="BARMM">Bangsamoro Autonomous Region in Muslim Mindanao (BARMM)</option>
+    </select>
+  </div>
+
+    <div class="form-group">
+      <label class="form-label" for="uri_transaksyon">Uri ng Transaksyon o Serbisyo <span class="req">*</span></label>
+      <input type="text" id="uri_transaksyon" placeholder="Hal. Pag-renew ng permit, pagkuha ng clearance">
+      <div class="error-msg" id="err-uri_transaksyon">Ilagay ang uri ng transaksyon.</div>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn btn-next" onclick="goNext(1)">Susunod <i class="fas fa-arrow-right"></i></button>
+    </div>
+
+    <!-- CONFIDENTIAL TEXT AT THE BOTTOM OF STEP 1 -->
+  <div class="step1-confidential-note">
+    <i class="fas fa-lock"></i> Ang inyong impormasyon ay protektado at mananatiling kompidensyal.
+  </div>
+
+  </div>
+
+  <!-- ══ STEP 2: CITIZEN'S CHARTER ══ -->
+  <div class="page" id="page2">
+    <div class="page-title">Citizen's Charter (CC)</div>
+
+    <div class="info-box">
+      <strong>Ano ang Citizen's Charter?</strong><br>
+      Ito ay isang opisyal na dokumento na naglalaman ng mga serbisyo ng isang ahensya/opisina ng gobyerno —
+      kasama na ang mga kinakailangang dokumento, kaukulang bayarin, at pangkabuuang oras ng pagproseso.
+    </div>
+
+    <div class="form-group">
+      <div class="section-header">CC1</div>
+      <label class="form-label">Alin sa mga sumusunod ang naglalarawan sa iyong kaalaman sa CC? <span class="req">*</span></label>
+      <div class="cc1-options" id="cc1_group">
+        <label class="cc1-option" onclick="selectCC1(this,'1')">
+          <input type="radio" name="cc1" value="1"> Alam ko ang CC at nakita ko ito sa napuntahang opisina.
+        </label>
+        <label class="cc1-option" onclick="selectCC1(this,'2')">
+          <input type="radio" name="cc1" value="2"> Alam ko ang CC pero hindi ko ito nakita sa napuntahang opisina.
+        </label>
+        <label class="cc1-option" onclick="selectCC1(this,'3')">
+          <input type="radio" name="cc1" value="3"> Nalaman ko ang CC nang makita ko ito sa napuntahang opisina.
+        </label>
+        <label class="cc1-option" onclick="selectCC1(this,'4')">
+          <input type="radio" name="cc1" value="4"> Hindi ko alam kung ano ang CC at wala akong nakita sa napuntahang opisina.
+        </label>
+      </div>
+      <div class="error-msg" id="err-cc1">Pumili ng isang sagot.</div>
+    </div>
+
+    <div class="form-group" id="cc2_group" style="display:none;">
+      <div class="section-header">CC2</div>
+      <label class="form-label">Kung alam ang CC, masasabi mo ba na ang CC nang napuntahang opisina ay… <span class="req">*</span></label>
+      <div class="inline-rating" id="cc2_options">
+        <label onclick="selectInline(this,'cc2')">
+          <input type="radio" name="cc2" value="Madali makita"> Madaling makita
+        </label>
+        <label onclick="selectInline(this,'cc2')">
+          <input type="radio" name="cc2" value="Malinaw"> Medyo madaling makita
+        </label>
+        <label onclick="selectInline(this,'cc2')">
+          <input type="radio" name="cc2" value="Nakatulong"> Mahirap makita
+        </label>
+        <label onclick="selectInline(this,'cc2')">
+          <input type="radio" name="cc2" value="Lahat"> Hindi makita
+        </label>
+        <label onclick="selectInline(this,'cc2')">
+          <input type="radio" name="cc2" value="N/A"> Hindi angkop
+        </label>
+      </div>
+      <div class="error-msg" id="err-cc2">Pumili ng isang sagot.</div>
+    </div>
+
+    <div class="form-group" id="cc3_group" style="display:none;">
+      <div class="section-header">CC3</div>
+      <label class="form-label">Kung alam ang CC, gaano nakatulong ang CC sa transaksyon mo? <span class="req">*</span></label>
+      <div class="inline-rating" id="cc3_options">
+        <label onclick="selectInline(this,'cc3')">
+          <input type="radio" name="cc3" value="Lubos na nakatulong"> Sobrang nakatulong
+        </label>
+        <label onclick="selectInline(this,'cc3')">
+          <input type="radio" name="cc3" value="Katamtamang nakatulong"> Nakatulong naman
+        </label>
+        <label onclick="selectInline(this,'cc3')">
+          <input type="radio" name="cc3" value="Kaunti ang naitulong"> Hindi nakatulong
+        </label>
+        <label onclick="selectInline(this,'cc3')">
+          <input type="radio" name="cc3" value="Hindi nakatulong"> Hindi angkop
+        </label>
+      </div>
+      <div class="error-msg" id="err-cc3">Pumili ng isang sagot.</div>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn btn-prev" onclick="goPrev(2)"><i class="fas fa-arrow-left"></i> Bumalik</button>
+      <button class="btn btn-next" onclick="goNext(2)">Susunod <i class="fas fa-arrow-right"></i></button>
+    </div>
+  </div>
+
+   <!-- ══ STEP 3: SQD RATINGS WITH EMOJIS ══ -->
+  <div class="page" id="page3">
+    <div class="page-title">Survey Questions (SQD)</div>
+    <div class="page-sub">
+      Piliin ang emoji na naaangkop sa inyong karanasan.
+    </div>
+
+    <!-- EMOJI LEGEND -->
+    <div class="emoji-legend">
+      <div class="legend-item">
+        <img src="../images/happy.png" alt="Happy">
+        <span>Labis na Sumasang-ayon</span>
+      </div>
+      <div class="legend-item">
+        <img src="../images/smile.png" alt="Smile">
+        <span>Sumasang-ayon</span>
+      </div>
+      <div class="legend-item">
+        <img src="../images/neutral.png" alt="Neutral">
+        <span>Walang Opinyon</span>
+      </div>
+      <div class="legend-item">
+        <img src="../images/sad.png" alt="Sad">
+        <span>Hindi Sumasang-ayon</span>
+      </div>
+      <div class="legend-item">
+        <img src="../images/angry.png" alt="Angry">
+        <span>Lubos na Hindi Sumasang-ayon</span>
+      </div>
+      <div class="legend-item">
+        <img src="../images/na.png" alt="NA">
+        <span>Hindi Naaangkop</span>
+      </div>
+    </div>
+
+    <div id="sqdContainer"></div>
+
+    <div class="error-msg" id="err-sqd" style="margin-top:0.5rem;">Pakisagutan ang lahat ng katanungan.</div>
+
+    <div class="btn-group">
+      <button class="btn btn-prev" onclick="goPrev(3)"><i class="fas fa-arrow-left"></i> Bumalik</button>
+      <button class="btn btn-next" onclick="goNext(3)">Susunod <i class="fas fa-arrow-right"></i></button>
+    </div>
+  </div>
+
+  <!-- ══ STEP 4: SUGGESTIONS ══ -->
+  <div class="page" id="page4">
+    <div class="page-title">Mga Suhestiyon at Puna</div>
+    <div class="page-sub">Ang huling hakbang. Maaari kang magbigay ng karagdagang komento (opsyonal).</div>
+
+    <div class="form-group">
+      <label class="form-label" for="suggestions">
+        Mga suhestiyon kung paano pa mapapabuti ang aming mga serbisyo
+        <span style="font-weight:400;color:var(--gray)">(opsyonal)</span>
+      </label>
+      <textarea id="suggestions" placeholder="Ilagay dito ang inyong komento o puna..."></textarea>
+    </div>
+
+    <div class="confidential-box">
+      <i class="fas fa-lock"></i>
+      Ang lahat ng inyong sagot ay mananatiling kompidensyal.
+    </div>
+
+    <div class="btn-group">
+      <button class="btn btn-prev" onclick="goPrev(4)"><i class="fas fa-arrow-left"></i> Bumalik</button>
+      <button class="btn btn-submit" onclick="submitForm()">Isumite <i class="fas fa-check"></i></button>
+    </div>
+  </div>
+
+  <!-- ══ SUCCESS SCREEN ══ -->
+  <div id="successScreen">
+    <div class="success-icon"><i class="fas fa-check"></i></div>
+    <div class="success-title">Salamat sa inyong sagot!</div>
+    <div class="success-sub">
+      Ang inyong feedback ay matagumpay na naitala. Ito ay makakatulong sa amin upang mapabuti
+      ang aming mga serbisyo para sa Bayan ng Luisiana.
+    </div>
+    <button class="btn-home" onclick="window.location.href='index.html'">
+      <i class="fas fa-home"></i> Bumalik sa Simula
+    </button>
+  </div>
+
+</div>
+
+<!-- FOOTER -->
+<footer class="site-footer">
+  <div class="site-footer-inner">
+    <div class="footer-col">
+      <div class="footer-brand">Municipality of Luisiana</div>
+      <p>Nakatuon sa pagbibigay ng mabilis, maayos, at mapagkakatiwalaang serbisyo para sa mamamayan.</p>
+    </div>
+    <div class="footer-col">
+      <div class="footer-brand">Contact Us</div>
+      <ul class="footer-contact">
+        <li><i class="fas fa-phone"></i> #-###-#######</li>
+        <li><i class="fas fa-envelope"></i> sample@gmail.com</li>
+        <li><i class="fas fa-map-marker-alt"></i> Brgy Zone VIII, Luisiana, Laguna, Philippines</li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-copy">
+    © 2026 Municipality of Luisiana. All Rights Reserved.
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.min.js"></script>
+<script src="../js/survey.js"></script>
+</body>
+</html>

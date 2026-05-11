@@ -1,0 +1,218 @@
+:root {
+  --blue: #004aad;
+  --blue-dark: #003380;
+  --light-bg: #f8f9fd;
+  --text: #1e293b;
+  --gray: #64748b;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden; /* No scroll on page level */
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: linear-gradient(to bottom, #e0f2fe, #f8f9fd);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.container {
+  max-width: 520px;
+  width: 100%;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.10);
+  text-align: center;
+  padding: 1.4rem 1.8rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  overflow: hidden;
+}
+
+/* Logos */
+.header-logos {
+  display: flex;
+  justify-content: center;
+  gap: 1.2rem;
+  flex-wrap: wrap;
+}
+
+.logo {
+  width: 58px;
+  height: 58px;
+  object-fit: contain;
+}
+
+/* Subtitle */
+.subtitle {
+  font-size: 0.78rem;
+  color: var(--text);
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.subtitle h3 {
+  font-size: 0.95rem;
+  color: var(--blue);
+  margin-top: 0.3rem;
+}
+
+.subtitle h2 {
+  font-size: 1.25rem;
+  color: var(--blue);
+  font-weight: 700;
+}
+
+/* Intro text */
+.intro-text {
+  font-size: 0.78rem;
+  line-height: 1.55;
+  color: #334155;
+  max-width: 480px;
+  margin: 0 auto;
+  text-align: justify;
+}
+
+/* Illustration */
+.center-image .front-img {
+  width: 100%;
+  max-width: 220px;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+
+/* Button */
+.btn-start {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: var(--blue);
+  color: white;
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 0.75rem 2rem;
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 12px rgba(0,74,173,0.25);
+  align-self: center;
+}
+
+.btn-start:hover {
+  background: var(--blue-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0,74,173,0.3);
+}
+
+/* Confidential note */
+.confidential {
+  font-size: 0.82rem;
+  color: var(--gray);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+/* ── MOBILE ≤480px ───────────────────────────────────── */
+@media (max-width: 480px) {
+  body {
+    padding: 0.6rem;
+  }
+
+  .container {
+    padding: 1rem 1.2rem 0.9rem;
+    gap: 0.45rem;
+    border-radius: 12px;
+  }
+
+  .logo {
+    width: 48px;
+    height: 48px;
+  }
+
+  .header-logos {
+    gap: 0.9rem;
+  }
+
+  .subtitle {
+    font-size: 0.72rem;
+  }
+
+  .subtitle h3 {
+    font-size: 0.85rem;
+  }
+
+  .subtitle h2 {
+    font-size: 1.05rem;
+  }
+
+  .intro-text {
+    font-size: 0.70rem;
+    line-height: 1.5;
+  }
+
+  .center-image .front-img {
+    max-width: 160px;
+  }
+
+  .btn-start {
+    font-size: 0.9rem;
+    padding: 0.65rem 1.6rem;
+    border-radius: 8px;
+  }
+
+  .confidential {
+    font-size: 0.75rem;
+  }
+
+  .confidential i {
+    font-size: 0.95rem;
+  }
+}
+
+/* ── VERY SMALL ≤360px ───────────────────────────────── */
+@media (max-width: 360px) {
+  .container {
+    gap: 0.35rem;
+    padding: 0.85rem 1rem 0.8rem;
+  }
+
+  .logo {
+    width: 42px;
+    height: 42px;
+  }
+
+  .subtitle h2 {
+    font-size: 0.95rem;
+  }
+
+  .intro-text {
+    font-size: 0.65rem;
+  }
+
+  .center-image .front-img {
+    max-width: 130px;
+  }
+
+  .btn-start {
+    font-size: 0.82rem;
+    padding: 0.55rem 1.3rem;
+  }
+}
