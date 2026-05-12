@@ -24,14 +24,21 @@ let dynamicPages = [];     // fetched from Supabase
 // comment : { [comment_questions.id]: string }
 const answers = { likert: {}, mc: {}, comment: {} };
 
+// ── OFFICES CACHE: name → UUID ──
+// Populated by fetchOffices() so submitForm() can look up the UUID
+// without an extra round-trip.
+let officeMap = {};   // { "Mayor's Office": "uuid-...", ... }
+
 
 // ═══════════════════════════════════════════════
 // OFFICES
+// Stores id+name so the dropdown shows names but
+// we always have the UUID ready for submission.
 // ═══════════════════════════════════════════════
 async function fetchOffices() {
   try {
     const { data, error } = await supabaseClient
-      .from('offices').select('name').order('name');
+      .from('offices').select('id, name').order('name');
     if (error) throw error;
     return data || [];
   } catch (e) {
@@ -43,42 +50,51 @@ async function fetchOffices() {
 function populateOfficeDropdown(offices) {
   const sel = document.getElementById('tanggapan');
   if (!sel) return;
+
+  officeMap = {};   // reset cache
+
   sel.innerHTML = '<option value="" disabled selected>Pumili ng Tanggapan</option>';
   if (!offices.length) {
     sel.innerHTML += '<option value="" disabled>No offices available</option>';
     return;
   }
+
   offices.forEach(o => {
+    officeMap[o.name] = o.id;           // cache name → UUID
     const opt = document.createElement('option');
-    opt.value = opt.textContent = o.name;
+    opt.value       = o.name;           // display value stays as name
+    opt.textContent = o.name;
     sel.appendChild(opt);
   });
 }
 
 function loadFallbackOffices() {
+  // Fallback has no UUIDs — submission will set office_id to null
+  // and log a warning. Replace with real DB data ASAP.
+  console.warn('Using fallback office list — office_id will be null for these submissions.');
   populateOfficeDropdown([
-    { name: "Mayor's Office" },
-    { name: "Municipal Planning and Development Council (MPDC)" },
-    { name: "Municipal Budget Office (MBO)" },
-    { name: "Municipal Treasurers Office (MTO)" },
-    { name: "Municipal Accounting Office (MAcO)" },
-    { name: "Municipal Civil Registrar (MCR)" },
-    { name: "Municipal Environment and Natural Resources Office (MENRO)" },
-    { name: "Municipal Social Welfare and Development Office (MSWDO)" },
-    { name: "Office of the Vice Mayor / Sangguniang Bayan (OVM/SB)" },
-    { name: "Municipal Agricultural Office (MAgO)" },
-    { name: "Municipal Assessor Office (MAsO)" },
-    { name: "Municipal Engineering Office (MEO)" },
-    { name: "Municipal Health Office (MHO)" },
-    { name: "Municipal Disaster Risk Reduction and Management Office (MDRRMO)" },
-    { name: "Luisiana WaterWorks System (LWS)" },
-    { name: "Public Employment Service Office (PESO) / 4Ps / Sustainable Livelihood Program (SLP)" },
-    { name: "Local Youth Development Office (LYDO)" },
-    { name: "Tourism Office" },
-    { name: "Human Resource Management Office (HRMO) / MRVDC" },
-    { name: "NC / Business Permit and Licensing Office (BPLO)" },
-    { name: "Kalinga sa Matatanda (KaSaMa)" },
-    { name: "Department of the Interior and Local Government (DILG)" },
+    { id: null, name: "Mayor's Office" },
+    { id: null, name: "Municipal Planning and Development Council (MPDC)" },
+    { id: null, name: "Municipal Budget Office (MBO)" },
+    { id: null, name: "Municipal Treasurers Office (MTO)" },
+    { id: null, name: "Municipal Accounting Office (MAcO)" },
+    { id: null, name: "Municipal Civil Registrar (MCR)" },
+    { id: null, name: "Municipal Environment and Natural Resources Office (MENRO)" },
+    { id: null, name: "Municipal Social Welfare and Development Office (MSWDO)" },
+    { id: null, name: "Office of the Vice Mayor / Sangguniang Bayan (OVM/SB)" },
+    { id: null, name: "Municipal Agricultural Office (MAgO)" },
+    { id: null, name: "Municipal Assessor Office (MAsO)" },
+    { id: null, name: "Municipal Engineering Office (MEO)" },
+    { id: null, name: "Municipal Health Office (MHO)" },
+    { id: null, name: "Municipal Disaster Risk Reduction and Management Office (MDRRMO)" },
+    { id: null, name: "Luisiana WaterWorks System (LWS)" },
+    { id: null, name: "Public Employment Service Office (PESO) / 4Ps / Sustainable Livelihood Program (SLP)" },
+    { id: null, name: "Local Youth Development Office (LYDO)" },
+    { id: null, name: "Tourism Office" },
+    { id: null, name: "Human Resource Management Office (HRMO) / MRVDC" },
+    { id: null, name: "NC / Business Permit and Licensing Office (BPLO)" },
+    { id: null, name: "Kalinga sa Matatanda (KaSaMa)" },
+    { id: null, name: "Department of the Interior and Local Government (DILG)" },
   ]);
 }
 
@@ -657,8 +673,19 @@ function validatePage(page) {
 
 // ═══════════════════════════════════════════════
 // SUBMIT — writes to the NEW schema
+// office_id is resolved from officeMap (name → UUID)
 // ═══════════════════════════════════════════════
 window.submitForm = async function () {
+  const selectedOfficeName = getVal('tanggapan');
+
+  // Resolve office UUID from the cache built during fetchOffices().
+  // If the name isn't in the cache (e.g. fallback list), office_id stays null.
+  const officeId = officeMap[selectedOfficeName] || null;
+
+  if (!officeId && selectedOfficeName) {
+    console.warn(`office_id not found for "${selectedOfficeName}" — saving with office_id = null.`);
+  }
+
   // Build survey_responses row
   const responseRow = {
     survey_id:        null,   // filled below if survey exists
@@ -668,7 +695,7 @@ window.submitForm = async function () {
     response_date:    getVal('petsa')        || null,
     gender:           getVal('kasarian')     || null,
     age:              getVal('edad') ? parseInt(getVal('edad')) : null,
-    office:           getVal('tanggapan')    || null,
+    office_id:        officeId,              // ← UUID FK (from officeMap)
     client_type:      radioVal('uri_kliyente') || null,
     region:           getVal('rehiyon')      || null,
     transaction_type: getVal('uri_transaksyon') || null,
@@ -727,7 +754,7 @@ window.submitForm = async function () {
     if (cErr) console.error('comment_responses insert error:', cErr);
   }
 
-  console.log('Submission saved. response_id:', responseId);
+  console.log('Submission saved. response_id:', responseId, '| office_id:', officeId);
   clearDraft();
   showSuccessScreen();
 };
@@ -882,7 +909,7 @@ function setDateRestrictions() {
 // INIT
 // ═══════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', async () => {
-  // Offices
+  // Fetch offices — this populates officeMap so submitForm() has the UUIDs
   const offices = await fetchOffices();
   offices.length ? populateOfficeDropdown(offices) : loadFallbackOffices();
 
