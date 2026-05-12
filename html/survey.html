@@ -36,15 +36,12 @@
   <!-- PROGRESS HEADER -->
   <div class="step1-progress-wrap">
     <div class="step1-progress-lines">
-      <div class="progress-line active"></div>
-      <div class="progress-line"></div>
-      <div class="progress-line"></div>
-      <div class="progress-line"></div>
+      <!-- Progress line segments are injected dynamically after pages load -->
     </div>
-    <div class="step1-step-label">Hakbang 1 ng 4</div>
+    <div class="step1-step-label">Nilo-load...</div>
   </div>
 
-  <!-- ══ STEP 1: PERSONAL INFO ══ -->
+  <!-- ══ STEP 1: PERSONAL INFO (STATIC) ══ -->
   <div class="page active" id="page1">
     <div class="page-title">Impormasyon ng Kliyente</div>
     <div class="page-sub">Punan ang mga patlang sa ibaba.</div>
@@ -54,12 +51,8 @@
         Pangalan <span style="font-weight:400;color:var(--gray)">(opsyonal)</span>
       </label>
       <div class="two-col">
-        <div>
-          <input type="text" id="firstName" placeholder="Unang Pangalan">
-        </div>
-        <div>
-          <input type="text" id="lastName" placeholder="Apelyido">
-        </div>
+        <div><input type="text" id="firstName" placeholder="Unang Pangalan"></div>
+        <div><input type="text" id="lastName" placeholder="Apelyido"></div>
       </div>
     </div>
 
@@ -71,7 +64,7 @@
     </div>
 
     <div class="form-group">
-      <label class="form-label" for="petsa">Petsa </label>
+      <label class="form-label" for="petsa">Petsa</label>
       <input type="date" id="petsa" max="">
     </div>
 
@@ -94,31 +87,9 @@
 
     <div class="form-group">
       <label class="form-label" for="tanggapan">Tanggapan Pinuntahan <span class="req">*</span></label>
+      <!-- Options populated dynamically from Supabase offices table -->
       <select id="tanggapan">
         <option value="" disabled selected>Pumili ng Tanggapan</option>
-        <option value="Mayor's Office">Office of Municipal Mayor (MO)</option>
-        <option value="MPDC">Municipal Planning and Development Council (MPDC)</option>
-        <option value="MBO">Municipal Budget Office (MBO)</option>
-        <option value="MTO">Municipal Treasurers Office (MTO)</option>
-        <option value="MAcO">Municipal Accounting Office (MAcO)</option>
-        <option value="MCR">Municipal Civil Registrar (MCR)</option>
-        <option value="MENRO">Municipal Environment and Natural Resources Office (MENRO)</option>
-        <option value="MSWDO">Municipal Social Welfare and Development Office (MSWDO)</option>
-        <option value="OVM/SB">Office of the Vice Mayor / Sangguniang Bayan</option>
-        <option value="MAgO">Municipal Agricultural Office (MAgO)</option>
-        <option value="MAsO">Municipal Assessor Office (MAsO)</option>
-        <option value="MEO">Municipal Engineering Office (MEO)</option>
-        <option value="MHO">Municipal Health Office (MHO)</option>
-        <option value="MDRRMO">Municipal Disaster Risk Reduction and Management Office (MDRRMO)</option>
-        <option value="LWS">Luisiana WaterWorks System (LWS)</option>
-        <option value="PESO/4Ps/SLP">Public Employment Service Office (PESO) / Pantawid Pamilyang Pilipino Program (4Ps) / Sustainable Livelihood Program (SLP)</option>
-        <option value="LYDO">Local Youth Development Office (LYDO)</option>
-        <option value="Tourism Office">Tourism Office</option>
-        <option value="HRMO/MRVDC">Human Resource Management Office (HRMO) / MRVDC</option>
-        <option value="NC/BPLO">NC / Business Permit and Licensing Office (BPLO)</option>
-        <option value="KaSaMa">Kalinga sa Matatanda (KaSaMa))</option>
-        <option value="DILG">Department of the Interior and Local Government (DILG)</option>
-
       </select>
       <div class="error-msg" id="err-tanggapan">Piliin ang tanggapan.</div>
     </div>
@@ -139,28 +110,28 @@
     </div>
 
     <div class="form-group">
-    <label class="form-label" for="rehiyon">Rehiyon </label>
-    <select id="rehiyon">
-      <option value="" disabled selected>Pumili ng Rehiyon</option>
-      <option value="NCR">National Capital Region (NCR)</option>
-      <option value="CAR">Cordillera Administrative Region (CAR)</option>
-      <option value="Region I">Region I (Ilocos Region)</option>
-      <option value="Region II">Region II (Cagayan Valley)</option>
-      <option value="Region III">Region III (Central Luzon)</option>
-      <option value="Region IV-A">Region IV-A (CALABARZON)</option>
-      <option value="Region IV-B">Region IV-B (MIMAROPA)</option>
-      <option value="Region V">Region V (Bicol Region)</option>
-      <option value="Region VI">Region VI (Western Visayas)</option>
-      <option value="Region VII">Region VII (Central Visayas)</option>
-      <option value="Region VIII">Region VIII (Eastern Visayas)</option>
-      <option value="Region IX">Region IX (Zamboanga Peninsula)</option>
-      <option value="Region X">Region X (Northern Mindanao)</option>
-      <option value="Region XI">Region XI (Davao Region)</option>
-      <option value="Region XII">Region XII (SOCCSKSARGEN)</option>
-      <option value="Region XIII">Region XIII (Caraga)</option>
-      <option value="BARMM">Bangsamoro Autonomous Region in Muslim Mindanao (BARMM)</option>
-    </select>
-  </div>
+      <label class="form-label" for="rehiyon">Rehiyon</label>
+      <select id="rehiyon">
+        <option value="" disabled selected>Pumili ng Rehiyon</option>
+        <option value="NCR">National Capital Region (NCR)</option>
+        <option value="CAR">Cordillera Administrative Region (CAR)</option>
+        <option value="Region I">Region I (Ilocos Region)</option>
+        <option value="Region II">Region II (Cagayan Valley)</option>
+        <option value="Region III">Region III (Central Luzon)</option>
+        <option value="Region IV-A">Region IV-A (CALABARZON)</option>
+        <option value="Region IV-B">Region IV-B (MIMAROPA)</option>
+        <option value="Region V">Region V (Bicol Region)</option>
+        <option value="Region VI">Region VI (Western Visayas)</option>
+        <option value="Region VII">Region VII (Central Visayas)</option>
+        <option value="Region VIII">Region VIII (Eastern Visayas)</option>
+        <option value="Region IX">Region IX (Zamboanga Peninsula)</option>
+        <option value="Region X">Region X (Northern Mindanao)</option>
+        <option value="Region XI">Region XI (Davao Region)</option>
+        <option value="Region XII">Region XII (SOCCSKSARGEN)</option>
+        <option value="Region XIII">Region XIII (Caraga)</option>
+        <option value="BARMM">Bangsamoro Autonomous Region in Muslim Mindanao (BARMM)</option>
+      </select>
+    </div>
 
     <div class="form-group">
       <label class="form-label" for="uri_transaksyon">Uri ng Transaksyon o Serbisyo <span class="req">*</span></label>
@@ -172,14 +143,12 @@
       <button class="btn btn-next" onclick="goNext(1)">Susunod <i class="fas fa-arrow-right"></i></button>
     </div>
 
-    <!-- CONFIDENTIAL TEXT AT THE BOTTOM OF STEP 1 -->
-  <div class="step1-confidential-note">
-    <i class="fas fa-lock"></i> Ang inyong impormasyon ay protektado at mananatiling kompidensyal.
+    <div class="step1-confidential-note">
+      <i class="fas fa-lock"></i> Ang inyong impormasyon ay protektado at mananatiling kompidensyal.
+    </div>
   </div>
 
-  </div>
-
-  <!-- ══ STEP 2: CITIZEN'S CHARTER ══ -->
+  <!-- ══ STEP 2: CITIZEN'S CHARTER (STATIC) ══ -->
   <div class="page" id="page2">
     <div class="page-title">Citizen's Charter (CC)</div>
 
@@ -258,74 +227,7 @@
     </div>
   </div>
 
-   <!-- ══ STEP 3: SQD RATINGS WITH EMOJIS ══ -->
-  <div class="page" id="page3">
-    <div class="page-title">Survey Questions (SQD)</div>
-    <div class="page-sub">
-      Piliin ang emoji na naaangkop sa inyong karanasan.
-    </div>
-
-    <!-- EMOJI LEGEND -->
-    <div class="emoji-legend">
-      <div class="legend-item">
-        <img src="../images/happy.png" alt="Happy">
-        <span>Labis na Sumasang-ayon</span>
-      </div>
-      <div class="legend-item">
-        <img src="../images/smile.png" alt="Smile">
-        <span>Sumasang-ayon</span>
-      </div>
-      <div class="legend-item">
-        <img src="../images/neutral.png" alt="Neutral">
-        <span>Walang Opinyon</span>
-      </div>
-      <div class="legend-item">
-        <img src="../images/sad.png" alt="Sad">
-        <span>Hindi Sumasang-ayon</span>
-      </div>
-      <div class="legend-item">
-        <img src="../images/angry.png" alt="Angry">
-        <span>Lubos na Hindi Sumasang-ayon</span>
-      </div>
-      <div class="legend-item">
-        <img src="../images/na.png" alt="NA">
-        <span>Hindi Naaangkop</span>
-      </div>
-    </div>
-
-    <div id="sqdContainer"></div>
-
-    <div class="error-msg" id="err-sqd" style="margin-top:0.5rem;">Pakisagutan ang lahat ng katanungan.</div>
-
-    <div class="btn-group">
-      <button class="btn btn-prev" onclick="goPrev(3)"><i class="fas fa-arrow-left"></i> Bumalik</button>
-      <button class="btn btn-next" onclick="goNext(3)">Susunod <i class="fas fa-arrow-right"></i></button>
-    </div>
-  </div>
-
-  <!-- ══ STEP 4: SUGGESTIONS ══ -->
-  <div class="page" id="page4">
-    <div class="page-title">Mga Suhestiyon at Puna</div>
-    <div class="page-sub">Ang huling hakbang. Maaari kang magbigay ng karagdagang komento (opsyonal).</div>
-
-    <div class="form-group">
-      <label class="form-label" for="suggestions">
-        Mga suhestiyon kung paano pa mapapabuti ang aming mga serbisyo
-        <span style="font-weight:400;color:var(--gray)">(opsyonal)</span>
-      </label>
-      <textarea id="suggestions" placeholder="Ilagay dito ang inyong komento o puna..."></textarea>
-    </div>
-
-    <div class="confidential-box">
-      <i class="fas fa-lock"></i>
-      Ang lahat ng inyong sagot ay mananatiling kompidensyal.
-    </div>
-
-    <div class="btn-group">
-      <button class="btn btn-prev" onclick="goPrev(4)"><i class="fas fa-arrow-left"></i> Bumalik</button>
-      <button class="btn btn-submit" onclick="submitForm()">Isumite <i class="fas fa-check"></i></button>
-    </div>
-  </div>
+  <!-- ══ DYNAMIC PAGES (Steps 3+) are injected here by survey.js ══ -->
 
   <!-- ══ SUCCESS SCREEN ══ -->
   <div id="successScreen">
@@ -359,9 +261,14 @@
     </div>
   </div>
   <div class="footer-copy">
-    © 2026 Municipality of Luisiana. All Rights Reserved.
+    © <span id="currentYear"></span> Municipality of Luisiana. All Rights Reserved.
   </div>
 </footer>
+
+<script>
+  // Set dynamic copyright year
+  document.getElementById('currentYear').textContent = new Date().getFullYear();
+</script>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.min.js"></script>
 <script src="../js/survey.js"></script>

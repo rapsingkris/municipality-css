@@ -3,457 +3,923 @@ const supabaseUrl = 'https://ircbidpdgkezxnszzeuu.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlyY2JpZHBkZ2tlenhuc3p6ZXV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2MjQ1ODYsImV4cCI6MjA5MjIwMDU4Nn0.OkLuJsyIx1a3AsIb9w7KWEDlyIJfWjQJ9O_fN5KoSMw';
 const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-console.log('Supabase client:', supabaseClient);
-console.log('Auth headers:', supabaseClient.rest?.headers);
-
-// ── SQD QUESTIONS ──
-const sqdQuestions = [
-  { id: 'SQD0', text: 'SQD-0 Nasiyahan ako sa serbisyo na aking natanggap sa napuntahang tanggapan.' },
-  { id: 'SQD1', text: 'SQD-1 Makatwiran ang oras na aking ginugol para sa pagproseso ng aking transaksyon.' },
-  { id: 'SQD2', text: 'SQD-2 Ang opisina ay sumusunod sa mga kinakailangang dokumento at mga hakbang batay sa impormasyong ibinigay.' },
-  { id: 'SQD3', text: 'SQD-3 Ang mga hakbang sa pagproseso, kasama na ang pagbayad, ay madali at simple lamang.' },
-  { id: 'SQD4', text: 'SQD-4 Mabilis at madali akong nakahanap ng impormasyon tungkol sa aking transaksyon mula sa opisina o sa website nito.' },
-  { id: 'SQD5', text: 'SQD-5 Nagbayad ako ng makatwirang halaga para sa aking transaksyon. (Kung libre ang serbisyo, piliin ang N/A.)' },
-  { id: 'SQD6', text: 'SQD-6 Pakiramdam ko ay patas ang opisina sa lahat — "walang palakasan" — sa aking transaksyon.' },
-  { id: 'SQD7', text: 'SQD-7 Magalang akong trinato ng mga tauhan at alam ko na sila ay handang tumulong sa akin.' },
-  { id: 'SQD8', text: 'SQD-8 Nakuha ko ang kinakailangan ko mula sa tanggapan; kung tinanggihan man, sapat na ipinaliwanag sa akin.' },
-];
-
 // ── EMOJI OPTIONS ──
 const emojiOptions = [
-  { value: '5', emoji: '<img src="../images/happy.png" alt="Happy">', selectedEmoji: '<img src="../images/happy_selected.png" alt="Happy Selected">' },
-  { value: '4', emoji: '<img src="../images/smile.png" alt="Smile">', selectedEmoji: '<img src="../images/smile_selected.png" alt="Smile Selected">' },
-  { value: '3', emoji: '<img src="../images/neutral.png" alt="Neutral">', selectedEmoji: '<img src="../images/neutral_selected.png" alt="Neutral Selected">' },
-  { value: '2', emoji: '<img src="../images/sad.png" alt="Sad">', selectedEmoji: '<img src="../images/sad_selected.png" alt="Sad Selected">' },
-  { value: '1', emoji: '<img src="../images/angry.png" alt="Angry">', selectedEmoji: '<img src="../images/angry_selected.png" alt="Angry Selected">' },
-  { value: 'NA', emoji: '<img src="../images/na.png" alt="N/A">', selectedEmoji: '<img src="../images/na.png" alt="N/A">' },
+  { value: '5', emoji: '<img src="../images/happy.png" alt="Happy">',   selectedEmoji: '<img src="../images/happy_selected.png" alt="Happy Selected">' },
+  { value: '4', emoji: '<img src="../images/smile.png" alt="Smile">',   selectedEmoji: '<img src="../images/smile_selected.png" alt="Smile Selected">' },
+  { value: '3', emoji: '<img src="../images/neutral.png" alt="Neutral">',selectedEmoji: '<img src="../images/neutral_selected.png" alt="Neutral Selected">' },
+  { value: '2', emoji: '<img src="../images/sad.png" alt="Sad">',       selectedEmoji: '<img src="../images/sad_selected.png" alt="Sad Selected">' },
+  { value: '1', emoji: '<img src="../images/angry.png" alt="Angry">',   selectedEmoji: '<img src="../images/angry_selected.png" alt="Angry Selected">' },
+  { value: 'NA',emoji: '<img src="../images/na.png" alt="N/A">',        selectedEmoji: '<img src="../images/na.png" alt="N/A">' },
 ];
 
-// ── PAGE STATE ──
+// ── STATE ──
 let currentPage = 1;
-const totalPages = 4;
+let totalPages  = 2;       // updated after dynamic pages load
+let dynamicPages = [];     // fetched from Supabase
 
-// ── INPUT VALIDATIONS ──
+// ── ANSWER STORE ──
+// likert  : { [likert_questions.id] : '1'–'5' | 'NA' }
+// mc      : { [mc_questions.id]     : string (radio) | string[] (checkbox) }
+// comment : { [comment_questions.id]: string }
+const answers = { likert: {}, mc: {}, comment: {} };
 
-// Prevent numbers in name fields
-function preventNumbers(e) {
-  e.target.value = e.target.value.replace(/[0-9]/g, '');
-}
 
-// Validate age (acceptable range 1-120)
-function validateAge(e) {
-  let value = parseInt(e.target.value);
-  if (isNaN(value)) {
-    e.target.value = '';
-  } else if (value < 1) {
-    e.target.value = 1;
-  } else if (value > 120) {
-    e.target.value = 120;
+// ═══════════════════════════════════════════════
+// OFFICES
+// ═══════════════════════════════════════════════
+async function fetchOffices() {
+  try {
+    const { data, error } = await supabaseClient
+      .from('offices').select('name').order('name');
+    if (error) throw error;
+    return data || [];
+  } catch (e) {
+    console.error('fetchOffices:', e);
+    return [];
   }
 }
 
-// Set date restrictions (current month and last month only)
-function setDateRestrictions() {
-  const dateInput = document.getElementById('petsa');
-  if (!dateInput) return;
-
-  const today = new Date();
-  const currentYear = today.getFullYear();
-  const currentMonth = today.getMonth(); // 0-11
-
-  // Calculate first day of last month
-  const lastMonthDate = new Date(currentYear, currentMonth - 1, 1);
-  const lastMonthYear = lastMonthDate.getFullYear();
-  const lastMonth = lastMonthDate.getMonth();
-
-  // First day of last month (YYYY-MM-DD)
-  const minDate = `${lastMonthYear}-${String(lastMonth + 1).padStart(2, '0')}-01`;
-
-  // Today's date as max
-  const maxDate = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-
-  dateInput.setAttribute('min', minDate);
-  dateInput.setAttribute('max', maxDate);
-
-  // Set default value to today
-  dateInput.value = maxDate;
+function populateOfficeDropdown(offices) {
+  const sel = document.getElementById('tanggapan');
+  if (!sel) return;
+  sel.innerHTML = '<option value="" disabled selected>Pumili ng Tanggapan</option>';
+  if (!offices.length) {
+    sel.innerHTML += '<option value="" disabled>No offices available</option>';
+    return;
+  }
+  offices.forEach(o => {
+    const opt = document.createElement('option');
+    opt.value = opt.textContent = o.name;
+    sel.appendChild(opt);
+  });
 }
 
-// ── SELECT SQD EMOJI ──
-window.selectSQDEmoji = function(el, questionId, value) {
-  const card = el.closest('.sqd-question-card');
-  if (card) {
-    card.querySelectorAll('.sqd-emoji-option').forEach(opt => {
-      opt.classList.remove('selected');
-      const emojiSpan = opt.querySelector('.sqd-emoji');
-      const currentImg = emojiSpan.querySelector('img');
-      const normalSrc = currentImg.getAttribute('data-normal-src');
-      if (normalSrc) {
-        currentImg.src = normalSrc;
+function loadFallbackOffices() {
+  populateOfficeDropdown([
+    { name: "Mayor's Office" },
+    { name: "Municipal Planning and Development Council (MPDC)" },
+    { name: "Municipal Budget Office (MBO)" },
+    { name: "Municipal Treasurers Office (MTO)" },
+    { name: "Municipal Accounting Office (MAcO)" },
+    { name: "Municipal Civil Registrar (MCR)" },
+    { name: "Municipal Environment and Natural Resources Office (MENRO)" },
+    { name: "Municipal Social Welfare and Development Office (MSWDO)" },
+    { name: "Office of the Vice Mayor / Sangguniang Bayan (OVM/SB)" },
+    { name: "Municipal Agricultural Office (MAgO)" },
+    { name: "Municipal Assessor Office (MAsO)" },
+    { name: "Municipal Engineering Office (MEO)" },
+    { name: "Municipal Health Office (MHO)" },
+    { name: "Municipal Disaster Risk Reduction and Management Office (MDRRMO)" },
+    { name: "Luisiana WaterWorks System (LWS)" },
+    { name: "Public Employment Service Office (PESO) / 4Ps / Sustainable Livelihood Program (SLP)" },
+    { name: "Local Youth Development Office (LYDO)" },
+    { name: "Tourism Office" },
+    { name: "Human Resource Management Office (HRMO) / MRVDC" },
+    { name: "NC / Business Permit and Licensing Office (BPLO)" },
+    { name: "Kalinga sa Matatanda (KaSaMa)" },
+    { name: "Department of the Interior and Local Government (DILG)" },
+  ]);
+}
+
+
+// ═══════════════════════════════════════════════
+// FETCH DYNAMIC PAGES FROM SUPABASE
+// Reads mc_pages / likert_pages / comment_pages
+// — the same tables survey_question.js writes to
+// ═══════════════════════════════════════════════
+async function fetchDynamicPages() {
+  try {
+    // Get latest survey
+    const { data: surveys, error: sErr } = await supabaseClient
+      .from('surveys').select('id').order('created_at', { ascending: false }).limit(1);
+    if (sErr || !surveys?.length) return loadFallbackDynamicPages();
+
+    const surveyId = surveys[0].id;
+
+    // Fetch all three page-type tables in parallel
+    const [mcRes, likertRes, commentRes] = await Promise.all([
+      supabaseClient.from('mc_pages').select('*').eq('survey_id', surveyId).order('page_order'),
+      supabaseClient.from('likert_pages').select('*').eq('survey_id', surveyId).order('page_order'),
+      supabaseClient.from('comment_pages').select('*').eq('survey_id', surveyId).order('page_order'),
+    ]);
+    if (mcRes.error)      throw mcRes.error;
+    if (likertRes.error)  throw likertRes.error;
+    if (commentRes.error) throw commentRes.error;
+
+    // Merge and sort by page_order so pages appear in the order the admin set
+    const allMeta = [
+      ...(mcRes.data     || []).map(p => ({ ...p, card_type: 'multiple-choice' })),
+      ...(likertRes.data || []).map(p => ({ ...p, card_type: 'likert' })),
+      ...(commentRes.data|| []).map(p => ({ ...p, card_type: 'comment' })),
+    ].sort((a, b) => a.page_order - b.page_order);
+
+    if (!allMeta.length) return loadFallbackDynamicPages();
+
+    // Fetch questions for every page (sequential to keep it readable)
+    const pages = [];
+    for (const meta of allMeta) {
+      const entry = { type: meta.card_type, pageId: meta.id, instruction: meta.instruction || '', questions: [] };
+
+      if (meta.card_type === 'multiple-choice') {
+        const { data: qs, error: qErr } = await supabaseClient
+          .from('mc_questions').select('*').eq('page_id', meta.id).order('question_order');
+        if (qErr) throw qErr;
+        for (const q of qs) {
+          const { data: opts, error: oErr } = await supabaseClient
+            .from('mc_options').select('option_text').eq('question_id', q.id).order('option_order');
+          if (oErr) throw oErr;
+          entry.questions.push({ id: q.id, text: q.question_text, select_type: q.select_type || 'radio', options: opts.map(o => o.option_text) });
+        }
+      } else if (meta.card_type === 'likert') {
+        const { data: qs, error: qErr } = await supabaseClient
+          .from('likert_questions').select('*').eq('page_id', meta.id).order('question_order');
+        if (qErr) throw qErr;
+        entry.questions = qs.map(q => ({ id: q.id, text: q.question_text }));
+      } else if (meta.card_type === 'comment') {
+        const { data: qs, error: qErr } = await supabaseClient
+          .from('comment_questions').select('*').eq('page_id', meta.id).order('question_order');
+        if (qErr) throw qErr;
+        entry.questions = qs.map(q => ({ id: q.id, text: q.question_text }));
       }
-    });
-  }
 
-  el.classList.add('selected');
-
-  const emojiSpan = el.querySelector('.sqd-emoji');
-  const currentImg = emojiSpan.querySelector('img');
-  const valueAttr = el.getAttribute('data-value');
-
-  const selectedOpt = emojiOptions.find(opt => opt.value === valueAttr);
-  if (selectedOpt && selectedOpt.selectedEmoji) {
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = selectedOpt.selectedEmoji;
-    const newSrc = tempDiv.querySelector('img').src;
-    currentImg.src = newSrc;
-  }
-
-  let hiddenRadio = document.querySelector(`input[name="${questionId}"]`);
-  if (!hiddenRadio) {
-    hiddenRadio = document.createElement('input');
-    hiddenRadio.type = 'radio';
-    hiddenRadio.name = questionId;
-    hiddenRadio.style.display = 'none';
-    document.body.appendChild(hiddenRadio);
-  }
-  hiddenRadio.value = value;
-  hiddenRadio.checked = true;
-};
-
-function goBack() {
-  // Find which page is currently active
-  const pages = document.querySelectorAll('.page');
-  let activeIndex = -1;
-
-  for (let i = 0; i < pages.length; i++) {
-    if (pages[i].classList.contains('active')) {
-      activeIndex = i;
-      break;
+      pages.push(entry);
     }
-  }
 
-  // If on page 1 (index 0), go back to the home page (index.html in root)
-  if (activeIndex === 0) {
-    // Navigate to the root directory's index.html
-    window.location.href = '../index.html';
-  }
-  // Otherwise go to previous page
-  else if (activeIndex > 0) {
-    goPrev(activeIndex + 1);
+    console.log(`Loaded ${pages.length} dynamic page(s) from Supabase.`);
+    return pages;
+
+  } catch (err) {
+    console.error('fetchDynamicPages error:', err);
+    return loadFallbackDynamicPages();
   }
 }
 
-function getSQDValue(questionId) {
-  const radio = document.querySelector(`input[name="${questionId}"]:checked`);
-  return radio ? radio.value : '';
+// Fallback — classic 9 SQD questions if no survey exists in DB yet
+function loadFallbackDynamicPages() {
+  console.warn('Using fallback SQD questions.');
+  return [{
+    type: 'likert', pageId: 'fallback-likert', instruction: '',
+    questions: [
+      { id: 'SQD0', text: 'SQD-0 Nasiyahan ako sa serbisyo na aking natanggap sa napuntahang tanggapan.' },
+      { id: 'SQD1', text: 'SQD-1 Makatwiran ang oras na aking ginugol para sa pagproseso ng aking transaksyon.' },
+      { id: 'SQD2', text: 'SQD-2 Ang opisina ay sumusunod sa mga kinakailangang dokumento at mga hakbang batay sa impormasyong ibinigay.' },
+      { id: 'SQD3', text: 'SQD-3 Ang mga hakbang sa pagproseso, kasama na ang pagbayad, ay madali at simple lamang.' },
+      { id: 'SQD4', text: 'SQD-4 Mabilis at madali akong nakahanap ng impormasyon tungkol sa aking transaksyon mula sa opisina o sa website nito.' },
+      { id: 'SQD5', text: 'SQD-5 Nagbayad ako ng makatwirang halaga para sa aking transaksyon. (Kung libre ang serbisyo, piliin ang N/A.)' },
+      { id: 'SQD6', text: 'SQD-6 Pakiramdam ko ay patas ang opisina sa lahat — "walang palakasan" — sa aking transaksyon.' },
+      { id: 'SQD7', text: 'SQD-7 Magalang akong trinato ng mga tauhan at alam ko na sila ay handang tumulong sa akin.' },
+      { id: 'SQD8', text: 'SQD-8 Nakuha ko ang kinakailangan ko mula sa tanggapan; kung tinanggihan man, sapat na ipinaliwanag sa akin.' },
+    ],
+  }];
 }
 
-function buildSQDTable() {
-  const container = document.getElementById('sqdContainer');
-  if (!container) return;
-  container.innerHTML = '';
 
-  sqdQuestions.forEach((q) => {
+// ═══════════════════════════════════════════════
+// BUILD PAGES
+// ═══════════════════════════════════════════════
+function buildDynamicPage(pageData, stepIndex) {
+  const page = document.createElement('div');
+  page.className = 'page';
+  page.id = `page${stepIndex}`;
+  page.setAttribute('data-page-type', pageData.type);
+  page.setAttribute('data-page-db-id', pageData.pageId);
+
+  if (pageData.type === 'likert')           buildLikertPage(page, pageData);
+  else if (pageData.type === 'multiple-choice') buildMCPage(page, pageData);
+  else if (pageData.type === 'comment')     buildCommentPage(page, pageData);
+
+  const btnGroup = document.createElement('div');
+  btnGroup.className = 'btn-group';
+  btnGroup.innerHTML = `
+    <button class="btn btn-prev" onclick="goPrev(${stepIndex})"><i class="fas fa-arrow-left"></i> Bumalik</button>
+    <button class="btn btn-next" onclick="goNext(${stepIndex})">Susunod <i class="fas fa-arrow-right"></i></button>
+  `;
+  page.appendChild(btnGroup);
+  return page;
+}
+
+// ── Likert ──
+function buildLikertPage(page, pageData) {
+  page.innerHTML = `
+    <div class="page-title">Survey Questions</div>
+    <div class="page-sub">${pageData.instruction || 'Piliin ang emoji na naaangkop sa inyong karanasan.'}</div>
+    <div class="emoji-legend">
+      <div class="legend-item"><img src="../images/happy.png"  alt="Happy"><span>Labis na Sumasang-ayon</span></div>
+      <div class="legend-item"><img src="../images/smile.png"  alt="Smile"><span>Sumasang-ayon</span></div>
+      <div class="legend-item"><img src="../images/neutral.png"alt="Neutral"><span>Walang Opinyon</span></div>
+      <div class="legend-item"><img src="../images/sad.png"    alt="Sad"><span>Hindi Sumasang-ayon</span></div>
+      <div class="legend-item"><img src="../images/angry.png"  alt="Angry"><span>Lubos na Hindi Sumasang-ayon</span></div>
+      <div class="legend-item"><img src="../images/na.png"     alt="NA"><span>Hindi Naaangkop</span></div>
+    </div>
+    <div id="sqdContainer_${pageData.pageId}"></div>
+    <div class="error-msg" id="err-likert-${pageData.pageId}">Pakisagutan ang lahat ng katanungan.</div>
+  `;
+
+  const container = page.querySelector(`#sqdContainer_${pageData.pageId}`);
+  pageData.questions.forEach(q => {
     const card = document.createElement('div');
     card.className = 'sqd-question-card';
     card.setAttribute('data-qid', q.id);
 
-    const questionText = document.createElement('div');
-    questionText.className = 'sqd-question-text';
-    questionText.textContent = q.text;
-    card.appendChild(questionText);
+    const txt = document.createElement('div');
+    txt.className = 'sqd-question-text';
+    txt.textContent = q.text;
+    card.appendChild(txt);
 
     const emojiGroup = document.createElement('div');
     emojiGroup.className = 'sqd-emoji-group';
-
     emojiOptions.forEach(opt => {
-      const optionDiv = document.createElement('div');
-      optionDiv.className = 'sqd-emoji-option';
-      optionDiv.setAttribute('data-value', opt.value);
-      optionDiv.onclick = function() {
-        window.selectSQDEmoji(optionDiv, q.id, opt.value);
-      };
+      const div = document.createElement('div');
+      div.className = 'sqd-emoji-option';
+      div.setAttribute('data-value', opt.value);
+      div.onclick = () => selectLikertEmoji(div, q.id, opt.value);
 
-      const emojiSpan = document.createElement('span');
-      emojiSpan.className = 'sqd-emoji';
-      emojiSpan.innerHTML = opt.emoji;
+      const span = document.createElement('span');
+      span.className = 'sqd-emoji';
+      span.innerHTML = opt.emoji;
+      const img = span.querySelector('img');
+      if (img) img.setAttribute('data-normal-src', img.src);
 
-      const img = emojiSpan.querySelector('img');
-      if (img) {
-        img.setAttribute('data-normal-src', img.src);
-      }
-
-      optionDiv.appendChild(emojiSpan);
-      emojiGroup.appendChild(optionDiv);
+      div.appendChild(span);
+      emojiGroup.appendChild(div);
     });
-
     card.appendChild(emojiGroup);
     container.appendChild(card);
   });
 }
 
-function updateProgressLines(pageNum) {
-  const lines = document.querySelectorAll('.progress-line');
-  lines.forEach((line, idx) => {
-    if (idx < pageNum) line.classList.add('active');
-    else line.classList.remove('active');
+// ── Multiple Choice ──
+function buildMCPage(page, pageData) {
+  page.innerHTML = `
+    <div class="page-title">Mga Katanungan</div>
+    <div class="page-sub">${pageData.instruction || 'Piliin ang sagot na naaangkop sa inyong karanasan.'}</div>
+    <div id="mcContainer_${pageData.pageId}"></div>
+    <div class="error-msg" id="err-mc-${pageData.pageId}">Pakisagutan ang lahat ng katanungan.</div>
+  `;
+
+  const container = page.querySelector(`#mcContainer_${pageData.pageId}`);
+  pageData.questions.forEach(q => {
+    const card = document.createElement('div');
+    card.className = 'sqd-question-card';
+    card.setAttribute('data-qid', q.id);
+
+    const txt = document.createElement('div');
+    txt.className = 'sqd-question-text';
+    txt.textContent = q.text;
+    card.appendChild(txt);
+
+    const optGroup = document.createElement('div');
+    optGroup.style.cssText = 'display:flex;flex-direction:column;gap:.5rem;margin-top:.75rem;';
+
+    q.options.forEach(optText => {
+      const label = document.createElement('label');
+      label.style.cssText = 'display:flex;align-items:center;gap:.75rem;padding:.65rem .9rem;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;transition:all .2s;font-size:.92rem;';
+
+      const inputType = q.select_type === 'checkbox' ? 'checkbox' : 'radio';
+      const input = document.createElement('input');
+      input.type = inputType;
+      input.name = `mc_${q.id}`;
+      input.value = optText;
+      input.style.cssText = 'width:1.1rem;height:1.1rem;accent-color:var(--blue);flex-shrink:0;';
+
+      input.addEventListener('change', () => {
+        if (inputType === 'radio') {
+          answers.mc[q.id] = optText;
+          optGroup.querySelectorAll('label').forEach(l => { l.style.borderColor='var(--border)'; l.style.background=''; l.style.fontWeight=''; });
+          label.style.borderColor = 'var(--blue)';
+          label.style.background  = 'var(--blue-light)';
+          label.style.fontWeight  = '600';
+        } else {
+          answers.mc[q.id] = [...optGroup.querySelectorAll('input:checked')].map(cb => cb.value);
+          label.style.borderColor = input.checked ? 'var(--blue)' : 'var(--border)';
+          label.style.background  = input.checked ? 'var(--blue-light)' : '';
+          label.style.fontWeight  = input.checked ? '600' : '';
+        }
+        saveDraft();
+      });
+
+      label.appendChild(input);
+      label.appendChild(document.createTextNode(optText));
+      optGroup.appendChild(label);
+    });
+
+    card.appendChild(optGroup);
+    container.appendChild(card);
   });
-  const stepLabel = document.querySelector('.step1-step-label');
-  if (stepLabel) {
-    stepLabel.textContent = `Hakbang ${pageNum} ng ${totalPages}`;
+}
+
+// ── Comment ──
+function buildCommentPage(page, pageData) {
+  page.innerHTML = `
+    <div class="page-title">Mga Komento</div>
+    <div class="page-sub">${pageData.instruction || 'Mangyaring magbigay ng inyong komento o puna.'}</div>
+    <div id="commentContainer_${pageData.pageId}"></div>
+  `;
+
+  const container = page.querySelector(`#commentContainer_${pageData.pageId}`);
+  pageData.questions.forEach(q => {
+    const card = document.createElement('div');
+    card.className = 'sqd-question-card';
+    card.setAttribute('data-qid', q.id);
+
+    const txt = document.createElement('div');
+    txt.className = 'sqd-question-text';
+    txt.textContent = q.text;
+    card.appendChild(txt);
+
+    const ta = document.createElement('textarea');
+    ta.id = `comment_${q.id}`;
+    ta.placeholder = 'Ilagay dito ang inyong sagot...';
+    ta.style.cssText = 'width:100%;margin-top:.75rem;resize:vertical;min-height:100px;';
+    ta.addEventListener('input', () => { answers.comment[q.id] = ta.value.trim(); saveDraft(); });
+
+    card.appendChild(ta);
+    container.appendChild(card);
+  });
+}
+
+// ── Suggestions (always last) ──
+function buildSuggestionsPage(stepIndex) {
+  const page = document.createElement('div');
+  page.className = 'page';
+  page.id = `page${stepIndex}`;
+  page.innerHTML = `
+    <div class="page-title">Mga Suhestiyon at Puna</div>
+    <div class="page-sub">Ang huling hakbang. Maaari kang magbigay ng karagdagang komento (opsyonal).</div>
+    <div class="form-group">
+      <label class="form-label" for="suggestions">
+        Mga suhestiyon kung paano pa mapapabuti ang aming mga serbisyo
+        <span style="font-weight:400;color:var(--gray)">(opsyonal)</span>
+      </label>
+      <textarea id="suggestions" placeholder="Ilagay dito ang inyong komento o puna..."></textarea>
+    </div>
+    <div class="confidential-box">
+      <i class="fas fa-lock"></i> Ang lahat ng inyong sagot ay mananatiling kompidensyal.
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-prev" onclick="goPrev(${stepIndex})"><i class="fas fa-arrow-left"></i> Bumalik</button>
+      <button class="btn btn-submit" onclick="submitForm()">Isumite <i class="fas fa-check"></i></button>
+    </div>
+  `;
+  return page;
+}
+
+
+// ═══════════════════════════════════════════════
+// INJECT INTO DOM
+// ═══════════════════════════════════════════════
+function injectDynamicPages() {
+  const container     = document.getElementById('mainContainer');
+  const successScreen = document.getElementById('successScreen');
+
+  // Remove any old injected pages
+  container.querySelectorAll('.page.dynamic-survey-page').forEach(p => p.remove());
+
+  let stepIndex = 3;   // pages 1 & 2 are static
+  dynamicPages.forEach(pageData => {
+    const el = buildDynamicPage(pageData, stepIndex);
+    el.classList.add('dynamic-survey-page');
+    container.insertBefore(el, successScreen);
+    stepIndex++;
+  });
+
+  const sugPage = buildSuggestionsPage(stepIndex);
+  sugPage.classList.add('dynamic-survey-page');
+  container.insertBefore(sugPage, successScreen);
+
+  totalPages = stepIndex;
+  updateProgressBar();
+  console.log('Total survey pages:', totalPages);
+}
+
+
+// ═══════════════════════════════════════════════
+// PROGRESS BAR
+// ═══════════════════════════════════════════════
+function updateProgressBar() {
+  const wrap = document.querySelector('.step1-progress-lines');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  for (let i = 0; i < totalPages; i++) {
+    const line = document.createElement('div');
+    line.className = 'progress-line';
+    wrap.appendChild(line);
   }
 }
 
-function showPage(num) {
-  document.querySelectorAll('.page').forEach((p, i) => {
-    p.classList.toggle('active', i + 1 === num);
+function updateProgressLines(pageNum) {
+  document.querySelectorAll('.progress-line').forEach((l, i) => l.classList.toggle('active', i < pageNum));
+  const lbl = document.querySelector('.step1-step-label');
+  if (lbl) lbl.textContent = `Hakbang ${pageNum} ng ${totalPages}`;
+}
+
+
+// ═══════════════════════════════════════════════
+// EMOJI SELECTION
+// ═══════════════════════════════════════════════
+function selectLikertEmoji(el, questionId, value) {
+  const card = el.closest('.sqd-question-card');
+  card?.querySelectorAll('.sqd-emoji-option').forEach(opt => {
+    opt.classList.remove('selected');
+    const img = opt.querySelector('.sqd-emoji img');
+    const src = img?.getAttribute('data-normal-src');
+    if (src) img.src = src;
   });
+
+  el.classList.add('selected');
+  const img = el.querySelector('.sqd-emoji img');
+  const found = emojiOptions.find(o => o.value === value);
+  if (found && img) {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = found.selectedEmoji;
+    const newSrc = tmp.querySelector('img')?.src;
+    if (newSrc) img.src = newSrc;
+  }
+
+  answers.likert[questionId] = value;
+  saveDraft();
+}
+
+
+// ═══════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════
+function showPage(num) {
+  document.querySelectorAll('.page').forEach((p, i) => p.classList.toggle('active', i + 1 === num));
   updateProgressLines(num);
   currentPage = num;
   window.scrollTo({ top: 0, behavior: 'smooth' });
+  saveDraft();
 }
 
-window.goPrev = function(fromPage) {
-  if (fromPage > 1) showPage(fromPage - 1);
-  else window.location.href = '../index.html';
+window.goPrev = (fromPage) => fromPage > 1 ? showPage(fromPage - 1) : (window.location.href = '../index.html');
+
+window.goNext = (fromPage) => {
+  if (validatePage(fromPage)) {
+    showPage(fromPage + 1);
+  } else {
+    // Scroll to the first error on the current page
+    if (fromPage === 1 || fromPage === 2) {
+      scrollToFirstError(fromPage);
+    } else if (fromPage >= 3) {
+      scrollToFirstUnanswered(fromPage);
+    }
+  }
 };
 
-// Scroll to first empty SQD question
-function scrollToFirstEmpty() {
-  const cards = document.querySelectorAll('.sqd-question-card');
-  for (let i = 0; i < cards.length; i++) {
-    const card = cards[i];
-    const selected = card.querySelector('.sqd-emoji-option.selected');
+function goBack() {
+  const pages = [...document.querySelectorAll('.page')];
+  const idx   = pages.findIndex(p => p.classList.contains('active'));
+  if (idx === 0) window.location.href = '../index.html';
+  else if (idx > 0) goPrev(idx + 1);
+}
 
-    if (!selected) {
-      // Scroll to the first unanswered question
-      card.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center'
-      });
-
-      // Highlight the card briefly
-      card.style.transition = 'background-color 0.3s';
+function scrollToFirstUnanswered(pageNum) {
+  const page = document.getElementById(`page${pageNum}`);
+  if (!page) return;
+  const type = page.getAttribute('data-page-type');
+  for (const card of page.querySelectorAll('.sqd-question-card')) {
+    const qid = card.getAttribute('data-qid');
+    let answered = false;
+    if (type === 'likert')           answered = !!answers.likert[qid];
+    else if (type === 'multiple-choice') { const v = answers.mc[qid]; answered = v && (Array.isArray(v) ? v.length > 0 : !!v); }
+    else answered = true; // comment = optional
+    if (!answered) {
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      card.style.transition = 'background-color .3s';
       card.style.backgroundColor = '#fee2e2';
-      setTimeout(() => {
-        card.style.backgroundColor = '';
-      }, 1500);
-
+      setTimeout(() => { card.style.backgroundColor = ''; }, 1500);
       return;
     }
   }
 }
 
-window.goNext = function(fromPage) {
-  if (validatePage(fromPage)) {
-    showPage(fromPage + 1);
-  } else {
-    // If validation fails on page 3, scroll to first empty question
-    if (fromPage === 3) {
-      scrollToFirstEmpty();
+// Scroll to first error on page 1 or 2
+function scrollToFirstError(pageNum) {
+  const page = document.getElementById(`page${pageNum}`);
+  if (!page) return;
+
+  // For Page 1
+  if (pageNum === 1) {
+    // Check Tanggapan field
+    if (!getVal('tanggapan')) {
+      const tanggapan = document.getElementById('tanggapan');
+      tanggapan.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      tanggapan.style.transition = 'border-color 0.3s, box-shadow 0.3s';
+      tanggapan.style.borderColor = '#dc2626';
+      tanggapan.style.boxShadow = '0 0 0 3px rgba(220,38,38,0.1)';
+      setTimeout(() => {
+        tanggapan.style.borderColor = '';
+        tanggapan.style.boxShadow = '';
+      }, 1500);
+      return;
+    }
+
+    // Check Uri ng Transaksyon field
+    if (!getVal('uri_transaksyon')) {
+      const transaksyon = document.getElementById('uri_transaksyon');
+      transaksyon.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      transaksyon.style.transition = 'border-color 0.3s, box-shadow 0.3s';
+      transaksyon.style.borderColor = '#dc2626';
+      transaksyon.style.boxShadow = '0 0 0 3px rgba(220,38,38,0.1)';
+      setTimeout(() => {
+        transaksyon.style.borderColor = '';
+        transaksyon.style.boxShadow = '';
+      }, 1500);
+      return;
     }
   }
-};
 
-window.selectRadio = function(el, groupId) {
-  const container = document.getElementById(groupId);
-  if (container) {
-    container.querySelectorAll('.radio-option').forEach(o => o.classList.remove('selected'));
+  // For Page 2 (Citizen's Charter)
+  if (pageNum === 2) {
+    // Check CC1 first
+    const cc1Selected = radioVal('cc1');
+    if (!cc1Selected) {
+      const cc1Group = document.getElementById('cc1_group');
+      if (cc1Group) {
+        cc1Group.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        cc1Group.style.transition = 'background-color 0.3s';
+        cc1Group.style.backgroundColor = '#fee2e2';
+        setTimeout(() => {
+          cc1Group.style.backgroundColor = '';
+        }, 1500);
+      }
+      return;
+    }
+
+    // If CC1 is 1,2,3, check CC2 and CC3
+    if (['1', '2', '3'].includes(cc1Selected)) {
+      if (!radioVal('cc2')) {
+        const cc2Options = document.getElementById('cc2_options');
+        if (cc2Options) {
+          cc2Options.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          cc2Options.style.transition = 'background-color 0.3s';
+          cc2Options.style.backgroundColor = '#fee2e2';
+          setTimeout(() => {
+            cc2Options.style.backgroundColor = '';
+          }, 1500);
+        }
+        return;
+      }
+
+      if (!radioVal('cc3')) {
+        const cc3Options = document.getElementById('cc3_options');
+        if (cc3Options) {
+          cc3Options.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          cc3Options.style.transition = 'background-color 0.3s';
+          cc3Options.style.backgroundColor = '#fee2e2';
+          setTimeout(() => {
+            cc3Options.style.backgroundColor = '';
+          }, 1500);
+        }
+        return;
+      }
+    }
   }
-  el.classList.add('selected');
-};
-
-window.selectCC1 = function(el, val) {
-  document.querySelectorAll('#cc1_group .cc1-option').forEach(o => o.classList.remove('selected'));
-  el.classList.add('selected');
-
-  const knowsCC = ['1', '2', '3'].includes(val);
-  const cc2Group = document.getElementById('cc2_group');
-  const cc3Group = document.getElementById('cc3_group');
-
-  if (cc2Group) cc2Group.style.display = knowsCC ? 'block' : 'none';
-  if (cc3Group) cc3Group.style.display = knowsCC ? 'block' : 'none';
-
-  if (!knowsCC) {
-    const cc2Radio = document.querySelector('input[name="cc2"]:checked');
-    const cc3Radio = document.querySelector('input[name="cc3"]:checked');
-    if (cc2Radio) cc2Radio.checked = false;
-    if (cc3Radio) cc3Radio.checked = false;
-    document.querySelectorAll('#cc2_options label, #cc3_options label').forEach(l => l.classList.remove('selected'));
-  }
-};
-
-window.selectInline = function(el) {
-  const container = el.closest('.inline-rating');
-  if (container) {
-    container.querySelectorAll('label').forEach(l => l.classList.remove('selected'));
-  }
-  el.classList.add('selected');
-};
-
-function val(id) {
-  const el = document.getElementById(id);
-  return el ? (el.value?.trim() || '') : '';
 }
 
-function radioVal(name) {
-  const el = document.querySelector(`input[name="${name}"]:checked`);
-  return el ? el.value : '';
-}
 
-function showErr(id, show) {
-  const el = document.getElementById(`err-${id}`);
-  if (el) el.style.display = show ? 'block' : 'none';
-}
+// ═══════════════════════════════════════════════
+// VALIDATION
+// ═══════════════════════════════════════════════
+const getVal   = id => document.getElementById(id)?.value?.trim() || '';
+const radioVal = name => document.querySelector(`input[name="${name}"]:checked`)?.value || '';
+const showErr  = (id, show) => { const el = document.getElementById(`err-${id}`); if (el) el.style.display = show ? 'block' : 'none'; };
 
 function validatePage(page) {
   let ok = true;
 
   if (page === 1) {
+    // Clear previous highlights from error fields
+    const tanggapan = document.getElementById('tanggapan');
+    const transaksyon = document.getElementById('uri_transaksyon');
+    if (tanggapan) {
+      tanggapan.style.removeProperty('border-color');
+      tanggapan.style.removeProperty('box-shadow');
+    }
+    if (transaksyon) {
+      transaksyon.style.removeProperty('border-color');
+      transaksyon.style.removeProperty('box-shadow');
+    }
+
     const fields = [
-      ['tanggapan', val('tanggapan')],
-      ['uri_transaksyon', val('uri_transaksyon')],
+      ['tanggapan', getVal('tanggapan')],
+      ['uri_transaksyon', getVal('uri_transaksyon')],
     ];
     fields.forEach(([id, v]) => {
       const fail = !v;
       showErr(id, fail);
       if (fail) ok = false;
     });
+    return ok;
   }
 
   if (page === 2) {
     const cc1 = radioVal('cc1');
-    if (!cc1) {
-      showErr('cc1', true);
-      ok = false;
-    } else {
-      showErr('cc1', false);
-      if (['1', '2', '3'].includes(cc1)) {
-        if (!radioVal('cc2')) { showErr('cc2', true); ok = false; }
-        else showErr('cc2', false);
-        if (!radioVal('cc3')) { showErr('cc3', true); ok = false; }
-        else showErr('cc3', false);
-      }
+    if (!cc1) { showErr('cc1', true); return false; }
+    showErr('cc1', false);
+    if (['1','2','3'].includes(cc1)) {
+      if (!radioVal('cc2')) { showErr('cc2', true); ok = false; } else showErr('cc2', false);
+      if (!radioVal('cc3')) { showErr('cc3', true); ok = false; } else showErr('cc3', false);
     }
+    return ok;
   }
 
-  if (page === 3) {
-    const missing = sqdQuestions.some(q => !getSQDValue(q.id));
-    const errEl = document.getElementById('err-sqd');
-    if (errEl) errEl.style.display = missing ? 'block' : 'none';
-    if (missing) ok = false;
+  // Dynamic pages — skip the suggestions page (always last)
+  if (page >= 3 && page < totalPages) {
+    const pageEl = document.getElementById(`page${page}`);
+    if (!pageEl) return true;
+    const type    = pageEl.getAttribute('data-page-type');
+    const dbId    = pageEl.getAttribute('data-page-db-id');
+
+    if (type === 'likert') {
+      const missing = [...pageEl.querySelectorAll('.sqd-question-card')].some(c => !answers.likert[c.getAttribute('data-qid')]);
+      const errEl = document.getElementById(`err-likert-${dbId}`);
+      if (errEl) errEl.style.display = missing ? 'block' : 'none';
+      if (missing) ok = false;
+
+    } else if (type === 'multiple-choice') {
+      const missing = [...pageEl.querySelectorAll('.sqd-question-card')].some(c => {
+        const v = answers.mc[c.getAttribute('data-qid')];
+        return !v || (Array.isArray(v) && !v.length);
+      });
+      const errEl = document.getElementById(`err-mc-${dbId}`);
+      if (errEl) errEl.style.display = missing ? 'block' : 'none';
+      if (missing) ok = false;
+    }
+    // comment = optional, always passes
   }
 
   return ok;
 }
 
-window.submitForm = async function() {
-  if (!validatePage(4)) {
-    return;
-  }
 
-  const surveyData = {
-    first_name: val('firstName') || null,
-    last_name: val('lastName') || null,
-    email: val('email') || null,
-    date: val('petsa') || null,
-    gender: val('kasarian') || null,
-    age: val('edad') ? parseInt(val('edad')) : null,
-    office: val('tanggapan') || null,
-    client_type: radioVal('uri_kliyente') || null,
-    region: val('rehiyon') || null,
-    transaction_type: val('uri_transaksyon') || null,
-    cc1: radioVal('cc1') || null,
-    cc2: radioVal('cc2') || null,
-    cc3: radioVal('cc3') || null,
-    suggestions: val('suggestions') || null,
+// ═══════════════════════════════════════════════
+// SUBMIT — writes to the NEW schema
+// ═══════════════════════════════════════════════
+window.submitForm = async function () {
+  // Build survey_responses row
+  const responseRow = {
+    survey_id:        null,   // filled below if survey exists
+    first_name:       getVal('firstName')    || null,
+    last_name:        getVal('lastName')     || null,
+    email:            getVal('email')        || null,
+    response_date:    getVal('petsa')        || null,
+    gender:           getVal('kasarian')     || null,
+    age:              getVal('edad') ? parseInt(getVal('edad')) : null,
+    office:           getVal('tanggapan')    || null,
+    client_type:      radioVal('uri_kliyente') || null,
+    region:           getVal('rehiyon')      || null,
+    transaction_type: getVal('uri_transaksyon') || null,
+    cc1:              radioVal('cc1')        || null,
+    cc2:              radioVal('cc2')        || null,
+    cc3:              radioVal('cc3')        || null,
+    suggestions:      getVal('suggestions')  || null,
   };
 
-  console.log('Saving to Supabase:', surveyData);
+  // Attach the survey_id from the loaded dynamic pages
+  try {
+    const { data: surveys } = await supabaseClient
+      .from('surveys').select('id').order('created_at', { ascending: false }).limit(1);
+    if (surveys?.length) responseRow.survey_id = surveys[0].id;
+  } catch (_) { /* non-fatal */ }
 
-  const { data, error } = await supabaseClient
-    .from('surveys_user')
-    .insert([surveyData])
-    .select();
+  // 1 — Insert survey_responses (the parent row)
+  const { data: inserted, error: rErr } = await supabaseClient
+    .from('survey_responses').insert([responseRow]).select();
+  if (rErr) { console.error('survey_responses insert error:', rErr); alert('Error saving: ' + rErr.message); return; }
 
-  if (error) {
-    console.error('Error:', error);
-    alert('Error saving: ' + error.message);
-    return;
+  const responseId = inserted[0].id;
+
+  // 2 — Insert likert_responses
+  // Skip fallback IDs (strings like 'SQD0') — they won't match real UUIDs
+  const likertRows = Object.entries(answers.likert)
+    .filter(([qid]) => isUUID(qid))
+    .map(([question_id, rating]) => ({ response_id: responseId, question_id, rating }));
+
+  if (likertRows.length) {
+    const { error: lErr } = await supabaseClient.from('likert_responses').insert(likertRows);
+    if (lErr) console.error('likert_responses insert error:', lErr);
   }
 
-  console.log('Saved successfully!', data);
+  // 3 — Insert mc_responses
+  const mcRows = Object.entries(answers.mc)
+    .filter(([qid]) => isUUID(qid))
+    .map(([question_id, value]) => ({
+      response_id:  responseId,
+      question_id,
+      answer_text:  Array.isArray(value) ? value.join(', ') : value,
+    }));
 
-  const surveyId = data[0].id;
-  const { error: answersError } = await supabaseClient
-  .from('sqd_answers')
-  .insert([{
-    survey_id: surveyId,
-    sqd0: getSQDValue('SQD0') || null,
-    sqd1: getSQDValue('SQD1') || null,
-    sqd2: getSQDValue('SQD2') || null,
-    sqd3: getSQDValue('SQD3') || null,
-    sqd4: getSQDValue('SQD4') || null,
-    sqd5: getSQDValue('SQD5') || null,
-    sqd6: getSQDValue('SQD6') || null,
-    sqd7: getSQDValue('SQD7') || null,
-    sqd8: getSQDValue('SQD8') || null,
-  }]);
+  if (mcRows.length) {
+    const { error: mErr } = await supabaseClient.from('mc_responses').insert(mcRows);
+    if (mErr) console.error('mc_responses insert error:', mErr);
+  }
 
-if (answersError) {
-  console.error('Error saving answers:', answersError);
-}
+  // 4 — Insert comment_responses (only non-empty answers)
+  const commentRows = Object.entries(answers.comment)
+    .filter(([qid, v]) => isUUID(qid) && v?.trim())
+    .map(([question_id, answer_text]) => ({ response_id: responseId, question_id, answer_text }));
 
+  if (commentRows.length) {
+    const { error: cErr } = await supabaseClient.from('comment_responses').insert(commentRows);
+    if (cErr) console.error('comment_responses insert error:', cErr);
+  }
+
+  console.log('Submission saved. response_id:', responseId);
+  clearDraft();
   showSuccessScreen();
 };
 
+// Simple UUID v4 check — prevents inserting fallback string IDs
+function isUUID(str) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+}
+
 function showSuccessScreen() {
-  const progressWrap = document.querySelector('.step1-progress-wrap');
-  if (progressWrap) progressWrap.style.display = 'none';
-
-  document.querySelectorAll('.page').forEach(p => {
-    p.classList.remove('active');
-    p.style.display = 'none';
-  });
-
-  const successScreen = document.getElementById('successScreen');
-  if (successScreen) successScreen.style.display = 'block';
-
+  document.querySelector('.step1-progress-wrap')?.style && (document.querySelector('.step1-progress-wrap').style.display = 'none');
+  document.querySelectorAll('.page').forEach(p => { p.classList.remove('active'); p.style.display = 'none'; });
+  const s = document.getElementById('successScreen');
+  if (s) s.style.display = 'block';
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// ── INITIALIZE ──
-document.addEventListener('DOMContentLoaded', () => {
-  buildSQDTable();
 
-  // Set date restrictions (current and last month only)
+// ═══════════════════════════════════════════════
+// DRAFT (localStorage)
+// ═══════════════════════════════════════════════
+function saveDraft() {
+  const d = {
+    firstName: getVal('firstName'), lastName: getVal('lastName'),
+    email: getVal('email'), petsa: getVal('petsa'),
+    kasarian: getVal('kasarian'), edad: getVal('edad'),
+    tanggapan: getVal('tanggapan'), uri_kliyente: radioVal('uri_kliyente'),
+    rehiyon: getVal('rehiyon'), uri_transaksyon: getVal('uri_transaksyon'),
+    cc1: radioVal('cc1'), cc2: radioVal('cc2'), cc3: radioVal('cc3'),
+    suggestions: getVal('suggestions'),
+    currentPage, answers, savedAt: new Date().toISOString(),
+  };
+  localStorage.setItem('surveyDraft', JSON.stringify(d));
+}
+
+function loadDraft() {
+  const raw = localStorage.getItem('surveyDraft');
+  if (!raw) return;
+  try {
+    const d = JSON.parse(raw);
+    const set = (id, v) => { const el = document.getElementById(id); if (el && v) el.value = v; };
+    set('firstName', d.firstName); set('lastName', d.lastName);
+    set('email', d.email); set('petsa', d.petsa);
+    set('kasarian', d.kasarian); set('edad', d.edad);
+    set('tanggapan', d.tanggapan); set('rehiyon', d.rehiyon);
+    set('uri_transaksyon', d.uri_transaksyon);
+
+    if (d.uri_kliyente) {
+      const r = document.querySelector(`input[name="uri_kliyente"][value="${d.uri_kliyente}"]`);
+      if (r) { r.checked = true; selectRadio(r.closest('.radio-option'), 'uri_kliyente'); }
+    }
+    if (d.cc1) {
+      const r = document.querySelector(`input[name="cc1"][value="${d.cc1}"]`);
+      if (r) { r.checked = true; selectCC1(r.closest('.cc1-option'), d.cc1); }
+    }
+    ['cc2','cc3'].forEach(name => {
+      if (d[name]) {
+        const r = document.querySelector(`input[name="${name}"][value="${d[name]}"]`);
+        if (r) { r.checked = true; selectInline(r.closest('label')); }
+      }
+    });
+
+    if (d.answers) {
+      // Restore likert visually
+      Object.entries(d.answers.likert || {}).forEach(([qid, value]) => {
+        answers.likert[qid] = value;
+        setTimeout(() => {
+          const opt = document.querySelector(`.sqd-question-card[data-qid="${qid}"] .sqd-emoji-option[data-value="${value}"]`);
+          if (opt) selectLikertEmoji(opt, qid, value);
+        }, 200);
+      });
+      // Restore MC
+      Object.entries(d.answers.mc || {}).forEach(([qid, value]) => {
+        answers.mc[qid] = value;
+        setTimeout(() => {
+          const vals = Array.isArray(value) ? value : [value];
+          vals.forEach(v => {
+            const inp = document.querySelector(`input[name="mc_${qid}"][value="${v}"]`);
+            if (inp) { inp.checked = true; inp.dispatchEvent(new Event('change')); }
+          });
+        }, 200);
+      });
+      // Restore comment
+      Object.entries(d.answers.comment || {}).forEach(([qid, value]) => {
+        answers.comment[qid] = value;
+        setTimeout(() => { const ta = document.getElementById(`comment_${qid}`); if (ta) ta.value = value; }, 200);
+      });
+    }
+
+    if (d.suggestions) setTimeout(() => { const el = document.getElementById('suggestions'); if (el) el.value = d.suggestions; }, 200);
+    if (d.currentPage > 1) setTimeout(() => showPage(d.currentPage), 300);
+  } catch (e) { console.error('loadDraft:', e); }
+}
+
+function clearDraft()  { localStorage.removeItem('surveyDraft'); }
+function setupAutoSave() {
+  document.querySelectorAll('input, select, textarea').forEach(el => { el.addEventListener('change', saveDraft); el.addEventListener('input', saveDraft); });
+  setInterval(saveDraft, 30000);
+}
+
+
+// ═══════════════════════════════════════════════
+// STATIC PAGE HELPERS (Pages 1 & 2)
+// ═══════════════════════════════════════════════
+window.selectRadio = function(el, groupId) {
+  document.getElementById(groupId)?.querySelectorAll('.radio-option').forEach(o => o.classList.remove('selected'));
+  el?.classList.add('selected');
+  saveDraft();
+};
+
+window.selectCC1 = function(el, v) {
+  document.querySelectorAll('#cc1_group .cc1-option').forEach(o => o.classList.remove('selected'));
+  el?.classList.add('selected');
+  const knows = ['1','2','3'].includes(v);
+  ['cc2_group','cc3_group'].forEach(id => { const g = document.getElementById(id); if (g) g.style.display = knows ? 'block' : 'none'; });
+  if (!knows) {
+    document.querySelectorAll('input[name="cc2"]:checked, input[name="cc3"]:checked').forEach(r => r.checked = false);
+    document.querySelectorAll('#cc2_options label, #cc3_options label').forEach(l => l.classList.remove('selected'));
+  }
+  saveDraft();
+};
+
+window.selectInline = function(el) {
+  el?.closest('.inline-rating')?.querySelectorAll('label').forEach(l => l.classList.remove('selected'));
+  el?.classList.add('selected');
+  saveDraft();
+};
+
+function preventNumbers(e) { e.target.value = e.target.value.replace(/\d/g, ''); }
+
+function validateAge(e) {
+  const v = parseInt(e.target.value);
+  if (isNaN(v)) e.target.value = '';
+  else if (v < 1) e.target.value = 1;
+  else if (v > 120) e.target.value = 120;
+}
+
+function setDateRestrictions() {
+  const el = document.getElementById('petsa');
+  if (!el) return;
+  const today = new Date();
+  const y = today.getFullYear(), m = today.getMonth();
+  const min = new Date(y, m - 1, 1);
+  el.setAttribute('min', `${min.getFullYear()}-${String(min.getMonth()+1).padStart(2,'0')}-01`);
+  const max = `${y}-${String(m+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  el.setAttribute('max', max);
+  el.value = max;
+}
+
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', async () => {
+  // Offices
+  const offices = await fetchOffices();
+  offices.length ? populateOfficeDropdown(offices) : loadFallbackOffices();
+
+  // Loading indicator
+  const container = document.getElementById('mainContainer');
+  const loader    = document.createElement('div');
+  loader.id = 'surveyLoader';
+  loader.style.cssText = 'text-align:center;padding:2rem;color:var(--gray);font-size:.9rem;';
+  loader.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Nilo-load ang survey...';
+  container.appendChild(loader);
+
+  // Fetch and inject dynamic pages
+  dynamicPages = await fetchDynamicPages();
+  document.getElementById('surveyLoader')?.remove();
+  injectDynamicPages();
+
+  // Static helpers
   setDateRestrictions();
+  const fn = document.getElementById('firstName');
+  const ln = document.getElementById('lastName');
+  fn?.addEventListener('input', preventNumbers);
+  ln?.addEventListener('input', preventNumbers);
+  const age = document.getElementById('edad');
+  age?.addEventListener('input', validateAge);
+  age?.addEventListener('blur',  validateAge);
 
-  // Add validation to name fields (prevent numbers)
-  const firstNameInput = document.getElementById('firstName');
-  const lastNameInput = document.getElementById('lastName');
-
-  if (firstNameInput) {
-    firstNameInput.addEventListener('input', preventNumbers);
-  }
-  if (lastNameInput) {
-    lastNameInput.addEventListener('input', preventNumbers);
-  }
-
-  // Add age validation
-  const ageInput = document.getElementById('edad');
-  if (ageInput) {
-    ageInput.addEventListener('input', validateAge);
-    ageInput.addEventListener('blur', validateAge);
+  const cc2 = document.getElementById('cc2_group');
+  const cc3 = document.getElementById('cc3_group');
+  if (!document.querySelector('input[name="cc1"]:checked')) {
+    if (cc2) cc2.style.display = 'none';
+    if (cc3) cc3.style.display = 'none';
   }
 
   updateProgressLines(1);
+  showPage(1);
+  loadDraft();
+  setupAutoSave();
 
-  const cc1Checked = document.querySelector('input[name="cc1"]:checked');
-  if (!cc1Checked) {
-    const cc2Group = document.getElementById('cc2_group');
-    const cc3Group = document.getElementById('cc3_group');
-    if (cc2Group) cc2Group.style.display = 'none';
-    if (cc3Group) cc3Group.style.display = 'none';
-  }
+  console.log('Survey ready. Pages:', totalPages);
 });
