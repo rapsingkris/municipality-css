@@ -14,26 +14,19 @@ const emojiOptions = [
 ];
 
 // ── STATE ──
-let currentPage = 1;
-let totalPages  = 2;       // updated after dynamic pages load
-let dynamicPages = [];     // fetched from Supabase
-
-// ── ANSWER STORE ──
-// likert  : { [likert_questions.id] : '1'–'5' | 'NA' }
-// mc      : { [mc_questions.id]     : string (radio) | string[] (checkbox) }
-// comment : { [comment_questions.id]: string }
-const answers = { likert: {}, mc: {}, comment: {} };
+let currentPage  = 1;
+let totalPages   = 2;
+let dynamicPages = [];
 
 // ── OFFICES CACHE: name → UUID ──
-// Populated by fetchOffices() so submitForm() can look up the UUID
-// without an extra round-trip.
-let officeMap = {};   // { "Mayor's Office": "uuid-...", ... }
+let officeMap = {};
+
+// ── ANSWER STORE ──
+const answers = { likert: {}, mc: {}, comment: {} };
 
 
 // ═══════════════════════════════════════════════
 // OFFICES
-// Stores id+name so the dropdown shows names but
-// we always have the UUID ready for submission.
 // ═══════════════════════════════════════════════
 async function fetchOffices() {
   try {
@@ -51,7 +44,7 @@ function populateOfficeDropdown(offices) {
   const sel = document.getElementById('tanggapan');
   if (!sel) return;
 
-  officeMap = {};   // reset cache
+  officeMap = {};
 
   sel.innerHTML = '<option value="" disabled selected>Pumili ng Tanggapan</option>';
   if (!offices.length) {
@@ -60,17 +53,15 @@ function populateOfficeDropdown(offices) {
   }
 
   offices.forEach(o => {
-    officeMap[o.name] = o.id;           // cache name → UUID
+    officeMap[o.name] = o.id;
     const opt = document.createElement('option');
-    opt.value       = o.name;           // display value stays as name
+    opt.value       = o.name;
     opt.textContent = o.name;
     sel.appendChild(opt);
   });
 }
 
 function loadFallbackOffices() {
-  // Fallback has no UUIDs — submission will set office_id to null
-  // and log a warning. Replace with real DB data ASAP.
   console.warn('Using fallback office list — office_id will be null for these submissions.');
   populateOfficeDropdown([
     { id: null, name: "Mayor's Office" },
@@ -101,19 +92,15 @@ function loadFallbackOffices() {
 
 // ═══════════════════════════════════════════════
 // FETCH DYNAMIC PAGES FROM SUPABASE
-// Reads mc_pages / likert_pages / comment_pages
-// — the same tables survey_question.js writes to
 // ═══════════════════════════════════════════════
 async function fetchDynamicPages() {
   try {
-    // Get latest survey
     const { data: surveys, error: sErr } = await supabaseClient
       .from('surveys').select('id').order('created_at', { ascending: false }).limit(1);
     if (sErr || !surveys?.length) return loadFallbackDynamicPages();
 
     const surveyId = surveys[0].id;
 
-    // Fetch all three page-type tables in parallel
     const [mcRes, likertRes, commentRes] = await Promise.all([
       supabaseClient.from('mc_pages').select('*').eq('survey_id', surveyId).order('page_order'),
       supabaseClient.from('likert_pages').select('*').eq('survey_id', surveyId).order('page_order'),
@@ -123,16 +110,14 @@ async function fetchDynamicPages() {
     if (likertRes.error)  throw likertRes.error;
     if (commentRes.error) throw commentRes.error;
 
-    // Merge and sort by page_order so pages appear in the order the admin set
     const allMeta = [
-      ...(mcRes.data     || []).map(p => ({ ...p, card_type: 'multiple-choice' })),
-      ...(likertRes.data || []).map(p => ({ ...p, card_type: 'likert' })),
-      ...(commentRes.data|| []).map(p => ({ ...p, card_type: 'comment' })),
+      ...(mcRes.data      || []).map(p => ({ ...p, card_type: 'multiple-choice' })),
+      ...(likertRes.data  || []).map(p => ({ ...p, card_type: 'likert' })),
+      ...(commentRes.data || []).map(p => ({ ...p, card_type: 'comment' })),
     ].sort((a, b) => a.page_order - b.page_order);
 
     if (!allMeta.length) return loadFallbackDynamicPages();
 
-    // Fetch questions for every page (sequential to keep it readable)
     const pages = [];
     for (const meta of allMeta) {
       const entry = { type: meta.card_type, pageId: meta.id, instruction: meta.instruction || '', questions: [] };
@@ -171,7 +156,6 @@ async function fetchDynamicPages() {
   }
 }
 
-// Fallback — classic 9 SQD questions if no survey exists in DB yet
 function loadFallbackDynamicPages() {
   console.warn('Using fallback SQD questions.');
   return [{
@@ -201,21 +185,31 @@ function buildDynamicPage(pageData, stepIndex) {
   page.setAttribute('data-page-type', pageData.type);
   page.setAttribute('data-page-db-id', pageData.pageId);
 
-  if (pageData.type === 'likert')           buildLikertPage(page, pageData);
+  if (pageData.type === 'likert')               buildLikertPage(page, pageData);
   else if (pageData.type === 'multiple-choice') buildMCPage(page, pageData);
-  else if (pageData.type === 'comment')     buildCommentPage(page, pageData);
+  else if (pageData.type === 'comment')         buildCommentPage(page, pageData);
 
   const btnGroup = document.createElement('div');
   btnGroup.className = 'btn-group';
-  btnGroup.innerHTML = `
-    <button class="btn btn-prev" onclick="goPrev(${stepIndex})"><i class="fas fa-arrow-left"></i> Bumalik</button>
-    <button class="btn btn-next" onclick="goNext(${stepIndex})">Susunod <i class="fas fa-arrow-right"></i></button>
-  `;
+
+  // Last dynamic page gets a Submit button instead of Next
+  const isLastPage = stepIndex === totalPages;
+  if (isLastPage) {
+    btnGroup.innerHTML = `
+      <button class="btn btn-prev" onclick="goPrev(${stepIndex})"><i class="fas fa-arrow-left"></i> Bumalik</button>
+      <button class="btn btn-submit" onclick="submitForm()">Isumite <i class="fas fa-check"></i></button>
+    `;
+  } else {
+    btnGroup.innerHTML = `
+      <button class="btn btn-prev" onclick="goPrev(${stepIndex})"><i class="fas fa-arrow-left"></i> Bumalik</button>
+      <button class="btn btn-next" onclick="goNext(${stepIndex})">Susunod <i class="fas fa-arrow-right"></i></button>
+    `;
+  }
+
   page.appendChild(btnGroup);
   return page;
 }
 
-// ── Likert ──
 function buildLikertPage(page, pageData) {
   page.innerHTML = `
     <div class="page-title">Survey Questions</div>
@@ -265,7 +259,6 @@ function buildLikertPage(page, pageData) {
   });
 }
 
-// ── Multiple Choice ──
 function buildMCPage(page, pageData) {
   page.innerHTML = `
     <div class="page-title">Mga Katanungan</div>
@@ -294,8 +287,8 @@ function buildMCPage(page, pageData) {
 
       const inputType = q.select_type === 'checkbox' ? 'checkbox' : 'radio';
       const input = document.createElement('input');
-      input.type = inputType;
-      input.name = `mc_${q.id}`;
+      input.type  = inputType;
+      input.name  = `mc_${q.id}`;
       input.value = optText;
       input.style.cssText = 'width:1.1rem;height:1.1rem;accent-color:var(--blue);flex-shrink:0;';
 
@@ -325,12 +318,16 @@ function buildMCPage(page, pageData) {
   });
 }
 
-// ── Comment ──
+// Comment page now also shows the confidential note and acts as the final step
+// when it is the last dynamic page (buttons are handled in buildDynamicPage).
 function buildCommentPage(page, pageData) {
   page.innerHTML = `
-    <div class="page-title">Mga Komento</div>
-    <div class="page-sub">${pageData.instruction || 'Mangyaring magbigay ng inyong komento o puna.'}</div>
+    <div class="page-title">Mga Komento at Suhestiyon</div>
+    <div class="page-sub">${pageData.instruction || 'Mangyaring magbigay ng inyong komento o puna (opsyonal).'}</div>
     <div id="commentContainer_${pageData.pageId}"></div>
+    <div class="confidential-box">
+      <i class="fas fa-lock"></i> Ang lahat ng inyong sagot ay mananatiling kompidensyal.
+    </div>
   `;
 
   const container = page.querySelector(`#commentContainer_${pageData.pageId}`);
@@ -355,44 +352,22 @@ function buildCommentPage(page, pageData) {
   });
 }
 
-// ── Suggestions (always last) ──
-function buildSuggestionsPage(stepIndex) {
-  const page = document.createElement('div');
-  page.className = 'page';
-  page.id = `page${stepIndex}`;
-  page.innerHTML = `
-    <div class="page-title">Mga Suhestiyon at Puna</div>
-    <div class="page-sub">Ang huling hakbang. Maaari kang magbigay ng karagdagang komento (opsyonal).</div>
-    <div class="form-group">
-      <label class="form-label" for="suggestions">
-        Mga suhestiyon kung paano pa mapapabuti ang aming mga serbisyo
-        <span style="font-weight:400;color:var(--gray)">(opsyonal)</span>
-      </label>
-      <textarea id="suggestions" placeholder="Ilagay dito ang inyong komento o puna..."></textarea>
-    </div>
-    <div class="confidential-box">
-      <i class="fas fa-lock"></i> Ang lahat ng inyong sagot ay mananatiling kompidensyal.
-    </div>
-    <div class="btn-group">
-      <button class="btn btn-prev" onclick="goPrev(${stepIndex})"><i class="fas fa-arrow-left"></i> Bumalik</button>
-      <button class="btn btn-submit" onclick="submitForm()">Isumite <i class="fas fa-check"></i></button>
-    </div>
-  `;
-  return page;
-}
-
 
 // ═══════════════════════════════════════════════
 // INJECT INTO DOM
+// Note: buildSuggestionsPage removed — comment pages
+// now serve as the final step with the Submit button.
 // ═══════════════════════════════════════════════
 function injectDynamicPages() {
   const container     = document.getElementById('mainContainer');
   const successScreen = document.getElementById('successScreen');
 
-  // Remove any old injected pages
   container.querySelectorAll('.page.dynamic-survey-page').forEach(p => p.remove());
 
-  let stepIndex = 3;   // pages 1 & 2 are static
+  // Pre-calculate totalPages so buildDynamicPage knows which is last
+  totalPages = 2 + dynamicPages.length;
+
+  let stepIndex = 3;
   dynamicPages.forEach(pageData => {
     const el = buildDynamicPage(pageData, stepIndex);
     el.classList.add('dynamic-survey-page');
@@ -400,11 +375,6 @@ function injectDynamicPages() {
     stepIndex++;
   });
 
-  const sugPage = buildSuggestionsPage(stepIndex);
-  sugPage.classList.add('dynamic-survey-page');
-  container.insertBefore(sugPage, successScreen);
-
-  totalPages = stepIndex;
   updateProgressBar();
   console.log('Total survey pages:', totalPages);
 }
@@ -475,12 +445,8 @@ window.goNext = (fromPage) => {
   if (validatePage(fromPage)) {
     showPage(fromPage + 1);
   } else {
-    // Scroll to the first error on the current page
-    if (fromPage === 1 || fromPage === 2) {
-      scrollToFirstError(fromPage);
-    } else if (fromPage >= 3) {
-      scrollToFirstUnanswered(fromPage);
-    }
+    if (fromPage === 1 || fromPage === 2) scrollToFirstError(fromPage);
+    else if (fromPage >= 3)               scrollToFirstUnanswered(fromPage);
   }
 };
 
@@ -498,9 +464,9 @@ function scrollToFirstUnanswered(pageNum) {
   for (const card of page.querySelectorAll('.sqd-question-card')) {
     const qid = card.getAttribute('data-qid');
     let answered = false;
-    if (type === 'likert')           answered = !!answers.likert[qid];
+    if (type === 'likert')               answered = !!answers.likert[qid];
     else if (type === 'multiple-choice') { const v = answers.mc[qid]; answered = v && (Array.isArray(v) ? v.length > 0 : !!v); }
-    else answered = true; // comment = optional
+    else answered = true; // comment cards are optional
     if (!answered) {
       card.scrollIntoView({ behavior: 'smooth', block: 'center' });
       card.style.transition = 'background-color .3s';
@@ -511,84 +477,52 @@ function scrollToFirstUnanswered(pageNum) {
   }
 }
 
-// Scroll to first error on page 1 or 2
 function scrollToFirstError(pageNum) {
   const page = document.getElementById(`page${pageNum}`);
   if (!page) return;
 
-  // For Page 1
   if (pageNum === 1) {
-    // Check Tanggapan field
     if (!getVal('tanggapan')) {
-      const tanggapan = document.getElementById('tanggapan');
-      tanggapan.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      tanggapan.style.transition = 'border-color 0.3s, box-shadow 0.3s';
-      tanggapan.style.borderColor = '#dc2626';
-      tanggapan.style.boxShadow = '0 0 0 3px rgba(220,38,38,0.1)';
-      setTimeout(() => {
-        tanggapan.style.borderColor = '';
-        tanggapan.style.boxShadow = '';
-      }, 1500);
+      const el = document.getElementById('tanggapan');
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.style.transition = 'border-color 0.3s, box-shadow 0.3s';
+      el.style.borderColor = '#dc2626';
+      el.style.boxShadow   = '0 0 0 3px rgba(220,38,38,0.1)';
+      setTimeout(() => { el.style.borderColor = ''; el.style.boxShadow = ''; }, 1500);
       return;
     }
-
-    // Check Uri ng Transaksyon field
     if (!getVal('uri_transaksyon')) {
-      const transaksyon = document.getElementById('uri_transaksyon');
-      transaksyon.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      transaksyon.style.transition = 'border-color 0.3s, box-shadow 0.3s';
-      transaksyon.style.borderColor = '#dc2626';
-      transaksyon.style.boxShadow = '0 0 0 3px rgba(220,38,38,0.1)';
-      setTimeout(() => {
-        transaksyon.style.borderColor = '';
-        transaksyon.style.boxShadow = '';
-      }, 1500);
+      const el = document.getElementById('uri_transaksyon');
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.style.transition = 'border-color 0.3s, box-shadow 0.3s';
+      el.style.borderColor = '#dc2626';
+      el.style.boxShadow   = '0 0 0 3px rgba(220,38,38,0.1)';
+      setTimeout(() => { el.style.borderColor = ''; el.style.boxShadow = ''; }, 1500);
       return;
     }
   }
 
-  // For Page 2 (Citizen's Charter)
   if (pageNum === 2) {
-    // Check CC1 first
     const cc1Selected = radioVal('cc1');
     if (!cc1Selected) {
-      const cc1Group = document.getElementById('cc1_group');
-      if (cc1Group) {
-        cc1Group.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        cc1Group.style.transition = 'background-color 0.3s';
-        cc1Group.style.backgroundColor = '#fee2e2';
-        setTimeout(() => {
-          cc1Group.style.backgroundColor = '';
-        }, 1500);
+      const el = document.getElementById('cc1_group');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.style.transition = 'background-color 0.3s';
+        el.style.backgroundColor = '#fee2e2';
+        setTimeout(() => { el.style.backgroundColor = ''; }, 1500);
       }
       return;
     }
-
-    // If CC1 is 1,2,3, check CC2 and CC3
     if (['1', '2', '3'].includes(cc1Selected)) {
       if (!radioVal('cc2')) {
-        const cc2Options = document.getElementById('cc2_options');
-        if (cc2Options) {
-          cc2Options.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          cc2Options.style.transition = 'background-color 0.3s';
-          cc2Options.style.backgroundColor = '#fee2e2';
-          setTimeout(() => {
-            cc2Options.style.backgroundColor = '';
-          }, 1500);
-        }
+        const el = document.getElementById('cc2_options');
+        if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.style.backgroundColor = '#fee2e2'; setTimeout(() => { el.style.backgroundColor = ''; }, 1500); }
         return;
       }
-
       if (!radioVal('cc3')) {
-        const cc3Options = document.getElementById('cc3_options');
-        if (cc3Options) {
-          cc3Options.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          cc3Options.style.transition = 'background-color 0.3s';
-          cc3Options.style.backgroundColor = '#fee2e2';
-          setTimeout(() => {
-            cc3Options.style.backgroundColor = '';
-          }, 1500);
-        }
+        const el = document.getElementById('cc3_options');
+        if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.style.backgroundColor = '#fee2e2'; setTimeout(() => { el.style.backgroundColor = ''; }, 1500); }
         return;
       }
     }
@@ -599,7 +533,7 @@ function scrollToFirstError(pageNum) {
 // ═══════════════════════════════════════════════
 // VALIDATION
 // ═══════════════════════════════════════════════
-const getVal   = id => document.getElementById(id)?.value?.trim() || '';
+const getVal   = id   => document.getElementById(id)?.value?.trim() || '';
 const radioVal = name => document.querySelector(`input[name="${name}"]:checked`)?.value || '';
 const showErr  = (id, show) => { const el = document.getElementById(`err-${id}`); if (el) el.style.display = show ? 'block' : 'none'; };
 
@@ -607,23 +541,14 @@ function validatePage(page) {
   let ok = true;
 
   if (page === 1) {
-    // Clear previous highlights from error fields
-    const tanggapan = document.getElementById('tanggapan');
+    const tanggapan  = document.getElementById('tanggapan');
     const transaksyon = document.getElementById('uri_transaksyon');
-    if (tanggapan) {
-      tanggapan.style.removeProperty('border-color');
-      tanggapan.style.removeProperty('box-shadow');
-    }
-    if (transaksyon) {
-      transaksyon.style.removeProperty('border-color');
-      transaksyon.style.removeProperty('box-shadow');
-    }
+    tanggapan?.style.removeProperty('border-color');
+    tanggapan?.style.removeProperty('box-shadow');
+    transaksyon?.style.removeProperty('border-color');
+    transaksyon?.style.removeProperty('box-shadow');
 
-    const fields = [
-      ['tanggapan', getVal('tanggapan')],
-      ['uri_transaksyon', getVal('uri_transaksyon')],
-    ];
-    fields.forEach(([id, v]) => {
+    [['tanggapan', getVal('tanggapan')], ['uri_transaksyon', getVal('uri_transaksyon')]].forEach(([id, v]) => {
       const fail = !v;
       showErr(id, fail);
       if (fail) ok = false;
@@ -642,19 +567,17 @@ function validatePage(page) {
     return ok;
   }
 
-  // Dynamic pages — skip the suggestions page (always last)
-  if (page >= 3 && page < totalPages) {
+  if (page >= 3 && page <= totalPages) {
     const pageEl = document.getElementById(`page${page}`);
     if (!pageEl) return true;
-    const type    = pageEl.getAttribute('data-page-type');
-    const dbId    = pageEl.getAttribute('data-page-db-id');
+    const type  = pageEl.getAttribute('data-page-type');
+    const dbId  = pageEl.getAttribute('data-page-db-id');
 
     if (type === 'likert') {
       const missing = [...pageEl.querySelectorAll('.sqd-question-card')].some(c => !answers.likert[c.getAttribute('data-qid')]);
       const errEl = document.getElementById(`err-likert-${dbId}`);
       if (errEl) errEl.style.display = missing ? 'block' : 'none';
       if (missing) ok = false;
-
     } else if (type === 'multiple-choice') {
       const missing = [...pageEl.querySelectorAll('.sqd-question-card')].some(c => {
         const v = answers.mc[c.getAttribute('data-qid')];
@@ -664,7 +587,7 @@ function validatePage(page) {
       if (errEl) errEl.style.display = missing ? 'block' : 'none';
       if (missing) ok = false;
     }
-    // comment = optional, always passes
+    // comment pages are always valid (optional answers)
   }
 
   return ok;
@@ -672,55 +595,53 @@ function validatePage(page) {
 
 
 // ═══════════════════════════════════════════════
-// SUBMIT — writes to the NEW schema
-// office_id is resolved from officeMap (name → UUID)
+// SUBMIT
+// suggestions field removed — comment_responses
+// now capture all open-ended answers.
 // ═══════════════════════════════════════════════
 window.submitForm = async function () {
   const selectedOfficeName = getVal('tanggapan');
-
-  // Resolve office UUID from the cache built during fetchOffices().
-  // If the name isn't in the cache (e.g. fallback list), office_id stays null.
   const officeId = officeMap[selectedOfficeName] || null;
 
-  if (!officeId && selectedOfficeName) {
+  if (!officeId) {
     console.warn(`office_id not found for "${selectedOfficeName}" — saving with office_id = null.`);
   }
 
-  // Build survey_responses row
   const responseRow = {
-    survey_id:        null,   // filled below if survey exists
-    first_name:       getVal('firstName')    || null,
-    last_name:        getVal('lastName')     || null,
-    email:            getVal('email')        || null,
-    response_date:    getVal('petsa')        || null,
-    gender:           getVal('kasarian')     || null,
+    survey_id:        null,
+    first_name:       getVal('firstName')       || null,
+    last_name:        getVal('lastName')        || null,
+    email:            getVal('email')           || null,
+    response_date:    getVal('petsa')           || null,
+    gender:           getVal('kasarian')        || null,
     age:              getVal('edad') ? parseInt(getVal('edad')) : null,
-    office_id:        officeId,              // ← UUID FK (from officeMap)
-    client_type:      radioVal('uri_kliyente') || null,
-    region:           getVal('rehiyon')      || null,
+    office_id:        officeId,
+    client_type:      radioVal('uri_kliyente')  || null,
+    region:           getVal('rehiyon')         || null,
     transaction_type: getVal('uri_transaksyon') || null,
-    cc1:              radioVal('cc1')        || null,
-    cc2:              radioVal('cc2')        || null,
-    cc3:              radioVal('cc3')        || null,
-    suggestions:      getVal('suggestions')  || null,
+    cc1:              radioVal('cc1')           || null,
+    cc2:              radioVal('cc2')           || null,
+    cc3:              radioVal('cc3')           || null,
+    // suggestions column removed from insert — answers go to comment_responses
   };
 
-  // Attach the survey_id from the loaded dynamic pages
   try {
     const { data: surveys } = await supabaseClient
       .from('surveys').select('id').order('created_at', { ascending: false }).limit(1);
     if (surveys?.length) responseRow.survey_id = surveys[0].id;
   } catch (_) { /* non-fatal */ }
 
-  // 1 — Insert survey_responses (the parent row)
   const { data: inserted, error: rErr } = await supabaseClient
     .from('survey_responses').insert([responseRow]).select();
-  if (rErr) { console.error('survey_responses insert error:', rErr); alert('Error saving: ' + rErr.message); return; }
+  if (rErr) {
+    console.error('survey_responses insert error:', rErr);
+    alert('Error saving your response: ' + rErr.message);
+    return;
+  }
 
   const responseId = inserted[0].id;
 
-  // 2 — Insert likert_responses
-  // Skip fallback IDs (strings like 'SQD0') — they won't match real UUIDs
+  // Likert answers
   const likertRows = Object.entries(answers.likert)
     .filter(([qid]) => isUUID(qid))
     .map(([question_id, rating]) => ({ response_id: responseId, question_id, rating }));
@@ -730,13 +651,13 @@ window.submitForm = async function () {
     if (lErr) console.error('likert_responses insert error:', lErr);
   }
 
-  // 3 — Insert mc_responses
+  // MC answers
   const mcRows = Object.entries(answers.mc)
     .filter(([qid]) => isUUID(qid))
     .map(([question_id, value]) => ({
-      response_id:  responseId,
+      response_id: responseId,
       question_id,
-      answer_text:  Array.isArray(value) ? value.join(', ') : value,
+      answer_text: Array.isArray(value) ? value.join(', ') : value,
     }));
 
   if (mcRows.length) {
@@ -744,7 +665,7 @@ window.submitForm = async function () {
     if (mErr) console.error('mc_responses insert error:', mErr);
   }
 
-  // 4 — Insert comment_responses (only non-empty answers)
+  // Comment answers (skip blank ones — they are optional)
   const commentRows = Object.entries(answers.comment)
     .filter(([qid, v]) => isUUID(qid) && v?.trim())
     .map(([question_id, answer_text]) => ({ response_id: responseId, question_id, answer_text }));
@@ -759,7 +680,6 @@ window.submitForm = async function () {
   showSuccessScreen();
 };
 
-// Simple UUID v4 check — prevents inserting fallback string IDs
 function isUUID(str) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
 }
@@ -784,7 +704,6 @@ function saveDraft() {
     tanggapan: getVal('tanggapan'), uri_kliyente: radioVal('uri_kliyente'),
     rehiyon: getVal('rehiyon'), uri_transaksyon: getVal('uri_transaksyon'),
     cc1: radioVal('cc1'), cc2: radioVal('cc2'), cc3: radioVal('cc3'),
-    suggestions: getVal('suggestions'),
     currentPage, answers, savedAt: new Date().toISOString(),
   };
   localStorage.setItem('surveyDraft', JSON.stringify(d));
@@ -818,7 +737,6 @@ function loadDraft() {
     });
 
     if (d.answers) {
-      // Restore likert visually
       Object.entries(d.answers.likert || {}).forEach(([qid, value]) => {
         answers.likert[qid] = value;
         setTimeout(() => {
@@ -826,7 +744,6 @@ function loadDraft() {
           if (opt) selectLikertEmoji(opt, qid, value);
         }, 200);
       });
-      // Restore MC
       Object.entries(d.answers.mc || {}).forEach(([qid, value]) => {
         answers.mc[qid] = value;
         setTimeout(() => {
@@ -837,27 +754,28 @@ function loadDraft() {
           });
         }, 200);
       });
-      // Restore comment
       Object.entries(d.answers.comment || {}).forEach(([qid, value]) => {
         answers.comment[qid] = value;
         setTimeout(() => { const ta = document.getElementById(`comment_${qid}`); if (ta) ta.value = value; }, 200);
       });
     }
 
-    if (d.suggestions) setTimeout(() => { const el = document.getElementById('suggestions'); if (el) el.value = d.suggestions; }, 200);
     if (d.currentPage > 1) setTimeout(() => showPage(d.currentPage), 300);
   } catch (e) { console.error('loadDraft:', e); }
 }
 
 function clearDraft()  { localStorage.removeItem('surveyDraft'); }
 function setupAutoSave() {
-  document.querySelectorAll('input, select, textarea').forEach(el => { el.addEventListener('change', saveDraft); el.addEventListener('input', saveDraft); });
+  document.querySelectorAll('input, select, textarea').forEach(el => {
+    el.addEventListener('change', saveDraft);
+    el.addEventListener('input',  saveDraft);
+  });
   setInterval(saveDraft, 30000);
 }
 
 
 // ═══════════════════════════════════════════════
-// STATIC PAGE HELPERS (Pages 1 & 2)
+// STATIC PAGE HELPERS
 // ═══════════════════════════════════════════════
 window.selectRadio = function(el, groupId) {
   document.getElementById(groupId)?.querySelectorAll('.radio-option').forEach(o => o.classList.remove('selected'));
@@ -909,11 +827,9 @@ function setDateRestrictions() {
 // INIT
 // ═══════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', async () => {
-  // Fetch offices — this populates officeMap so submitForm() has the UUIDs
   const offices = await fetchOffices();
   offices.length ? populateOfficeDropdown(offices) : loadFallbackOffices();
 
-  // Loading indicator
   const container = document.getElementById('mainContainer');
   const loader    = document.createElement('div');
   loader.id = 'surveyLoader';
@@ -921,17 +837,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   loader.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Nilo-load ang survey...';
   container.appendChild(loader);
 
-  // Fetch and inject dynamic pages
   dynamicPages = await fetchDynamicPages();
   document.getElementById('surveyLoader')?.remove();
   injectDynamicPages();
 
-  // Static helpers
   setDateRestrictions();
-  const fn = document.getElementById('firstName');
-  const ln = document.getElementById('lastName');
-  fn?.addEventListener('input', preventNumbers);
-  ln?.addEventListener('input', preventNumbers);
+  document.getElementById('firstName')?.addEventListener('input', preventNumbers);
+  document.getElementById('lastName')?.addEventListener('input', preventNumbers);
   const age = document.getElementById('edad');
   age?.addEventListener('input', validateAge);
   age?.addEventListener('blur',  validateAge);
